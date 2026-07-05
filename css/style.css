@@ -45,7 +45,7 @@ canvas#game {
   top: 0; left: 50%;
   transform: translateX(-50%);
   width: min(100vw, calc(100vh * 480 / 800));
-  padding: 10px 10px 0;
+  padding: 10px 58px 0 10px;
   pointer-events: none;
   z-index: 5;
 }
@@ -246,15 +246,15 @@ h1.logo {
 .end-btns { display: flex; gap: 12px; margin-top: .6vh; }
 .end-btns .big-btn { min-width: 0; padding: 1.4vh 7vw; font-size: clamp(17px, 3.2vh, 26px); }
 
-/* ---------- Mute ---------- */
+/* ---------- Mute (top corner, out of the play zone) ---------- */
 #btn-mute {
   position: absolute;
-  bottom: 12px; right: 12px;
+  top: 10px; right: 10px;
   z-index: 20;
   border: none;
-  width: 46px; height: 46px;
+  width: 40px; height: 40px;
   border-radius: 999px;
-  font-size: 20px;
+  font-size: 17px;
   cursor: pointer;
   background: linear-gradient(180deg, #ffffffcc, #e9d9ffcc);
   box-shadow: 0 3px 0 rgba(0,0,0,.2);

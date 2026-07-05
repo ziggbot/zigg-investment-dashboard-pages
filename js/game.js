@@ -19,41 +19,41 @@ const DISPENSER_Y = 96;       // y of the cloud dispenser
 // ============================================================
 const T = {
   // --- pancakes ---
-  butter:     { label:'Butter',      w:54, h:24, corner:8,  base:'#ffe27a', dark:'#f0b32c', deco:'gloss',  density:.0012, friction:1.0 },
-  cream:      { label:'Whipped cream',w:66, h:32, corner:14, base:'#ffffff', dark:'#e8e0f5', deco:'swirl', decoColor:'#d8cbee', density:.0008, friction:1.1, face:true },
-  strawberry: { label:'Strawberry',  w:44, h:34, corner:12, round:true, base:'#ff6b81', dark:'#d63d55', deco:'seeds', decoColor:'#ffd9e0', stem:true, density:.0012, friction:.95, face:true },
-  jam:        { label:'Jam blob',    w:62, h:22, corner:10, base:'#c05be0', dark:'#8e35b5', deco:'swirl', decoColor:'#e3a9f5', density:.0011, friction:1.15 },
-  scoop:      { label:'Ice cream',   w:54, h:42, corner:15, round:true, base:'#ffc2dc', dark:'#f08bbb', deco:'swirl', decoColor:'#ffffff', density:.001, friction:.9, face:true },
-  banana:     { label:'Banana slice',w:58, h:18, corner:8,  base:'#fff3b8', dark:'#f2d873', deco:'ring',  decoColor:'#e8c95a', density:.001, friction:1.0 },
+  butter:     { label:'Butter',      w:54, h:24, corner:8,  art:'cyl',                    base:'#ffe98c', dark:'#e8a83c', density:.0012, friction:1.0 },
+  cream:      { label:'Whipped cream',w:66, h:32, corner:14, art:'swirl',                 base:'#ffffff', dark:'#ddd2f0', density:.0008, friction:1.1 },
+  strawberry: { label:'Strawberry',  w:44, h:34, corner:12, art:'berry',                  base:'#ff6b81', dark:'#c9304a', density:.0012, friction:.95 },
+  jam:        { label:'Jam',         w:62, h:22, corner:10, art:'blob',                   base:'#c05be0', dark:'#842fa8', density:.0011, friction:1.15 },
+  scoop:      { label:'Ice cream',   w:54, h:42, corner:15, art:'scoop',                  base:'#ffd2e4', dark:'#ef86b8', density:.001, friction:.9 },
+  banana:     { label:'Banana slice',w:58, h:18, corner:8,  art:'cyl', deco:'banana',     base:'#ffefad', dark:'#e8c25a', density:.001, friction:1.0 },
   // --- pizza ---
-  cheese:     { label:'Cheese',      w:90, h:18, corner:8,  base:'#ffdf5e', dark:'#f5b93a', deco:'holes', decoColor:'#e0a01f', density:.0011, friction:1.1 },
-  ham:        { label:'Ham',         w:78, h:14, corner:6,  base:'#ffb3c1', dark:'#f57f97', deco:'gloss', density:.0012, friction:1.0 },
-  pepperoni:  { label:'Pepperoni',   w:48, h:38, corner:13, round:true, base:'#e8564a', dark:'#b52e2e', deco:'dots', decoColor:'#8e1f1f', density:.0014, friction:.95, face:true },
-  mushroom:   { label:'Mushroom',    w:52, h:30, corner:12, base:'#f2e3cf', dark:'#cdb193', deco:'cap',  decoColor:'#b58c62', density:.0009, friction:1.0 },
-  olive:      { label:'Olive',       w:32, h:24, corner:9, round:true, base:'#6f7d3a', dark:'#454f1f', deco:'ring', decoColor:'#2f3714', density:.0012, friction:.9 },
-  pepper:     { label:'Green pepper',w:70, h:16, corner:7,  base:'#8fdc5e', dark:'#55a832', deco:'gloss', density:.001, friction:1.0 },
+  cheese:     { label:'Cheese',      w:90, h:18, corner:8,  art:'cyl', deco:'holes',      base:'#ffe066', dark:'#e8a52e', density:.0011, friction:1.1 },
+  ham:        { label:'Ham',         w:78, h:14, corner:6,  art:'cyl',                    base:'#ffc2cd', dark:'#e87b93', density:.0012, friction:1.0 },
+  pepperoni:  { label:'Pepperoni',   w:48, h:38, corner:13, art:'cyl', deco:'pepperoni',  base:'#e8564a', dark:'#96201c', density:.0014, friction:.95 },
+  mushroom:   { label:'Mushroom',    w:52, h:30, corner:12, art:'mushroom',               base:'#f7ecd9', dark:'#bd9668', density:.0009, friction:1.0 },
+  olive:      { label:'Olive',       w:32, h:24, corner:9,  art:'cyl', deco:'olive',      base:'#7d8c45', dark:'#3d4519', density:.0012, friction:.9 },
+  pepper:     { label:'Green pepper',w:70, h:16, corner:7,  art:'pepperstrip',            base:'#8fdc5e', dark:'#4a9629', density:.001, friction:1.0 },
   // --- burger ---
-  patty:      { label:'Patty',       w:86, h:22, corner:10, base:'#9c6238', dark:'#6b3d1e', deco:'dots', decoColor:'#5a3015', density:.002,  friction:1.15 },
-  chzslice:   { label:'Cheese slice',w:90, h:12, corner:5,  base:'#ffca3a', dark:'#f5a623', deco:'gloss', density:.001, friction:1.1 },
-  lettuce:    { label:'Lettuce',     w:92, h:16, corner:7,  base:'#a5e86b', dark:'#5fbf3a', deco:'wavy', decoColor:'#7ed254', density:.0007, friction:1.05 },
-  tomato:     { label:'Tomato',      w:80, h:14, corner:6,  base:'#ff6b5e', dark:'#d63c2e', deco:'gloss', density:.0011, friction:1.0 },
-  pickle:     { label:'Bouncy pickle',w:36, h:26, corner:10, round:true, base:'#7dbf4e', dark:'#4e8c2a', deco:'dots', decoColor:'#3e6e21', density:.001, friction:.9, restitution:.45, face:true },
-  bacon:      { label:'Bacon',       w:84, h:12, corner:5,  base:'#c96a4a', dark:'#96402a', deco:'stripes', decoColor:'#f0b394', density:.0012, friction:1.0 },
-  onion:      { label:'Onion ring',  w:42, h:30, corner:11, round:true, base:'#f7ecff', dark:'#d9c4ea', deco:'ring', decoColor:'#c0a5d8', density:.0008, friction:.9, restitution:.3 },
+  patty:      { label:'Beef patty',  w:86, h:22, corner:10, art:'cyl', deco:'char',       base:'#9c6238', dark:'#57301a', density:.002,  friction:1.15 },
+  chzslice:   { label:'Cheese slice',w:90, h:12, corner:5,  art:'cyl',                    base:'#ffd23a', dark:'#e8931c', density:.001, friction:1.1 },
+  lettuce:    { label:'Lettuce',     w:92, h:16, corner:7,  art:'ruffle',                 base:'#b5ed7d', dark:'#57ad33', density:.0007, friction:1.05 },
+  tomato:     { label:'Tomato slice',w:80, h:14, corner:6,  art:'cyl', deco:'tomato',     base:'#ff6b52', dark:'#c22e1f', density:.0011, friction:1.0 },
+  pickle:     { label:'Bouncy pickle',w:36, h:26, corner:10, art:'cyl', deco:'pickle',    base:'#8cc95e', dark:'#3e701f', density:.001, friction:.9, restitution:.32 },
+  bacon:      { label:'Bacon',       w:84, h:12, corner:5,  art:'bacon',                  base:'#c25a3d', dark:'#87301a', density:.0012, friction:1.0 },
+  onion:      { label:'Onion ring',  w:42, h:30, corner:11, art:'cyl', deco:'onion',      base:'#fdf3ff', dark:'#c9aede', density:.0008, friction:.9, restitution:.22 },
   // --- taco ---
-  meat:       { label:'Taco meat',   w:74, h:24, corner:10, base:'#a1663b', dark:'#71401f', deco:'dots', decoColor:'#5c3013', density:.0018, friction:1.15 },
-  shreds:     { label:'Cheese shreds',w:66, h:18, corner:8, base:'#ffb84d', dark:'#f08a1d', deco:'stripes', decoColor:'#ffdf9e', density:.0009, friction:1.05 },
-  chili:      { label:'Chili pepper',w:56, h:20, corner:9,  base:'#ff4d3a', dark:'#c22415', deco:'gloss', stem:true, density:.001, friction:.95, face:true },
-  tomcube:    { label:'Tomato cubes',w:44, h:20, corner:7,  base:'#ff7a63', dark:'#d84a33', deco:'dots', decoColor:'#ffb4a3', density:.0011, friction:1.0 },
-  guac:       { label:'Guacamole',   w:66, h:24, corner:11, base:'#a8d95a', dark:'#6fa832', deco:'swirl', decoColor:'#d2f0a0', density:.001, friction:1.2 },
-  sourcream:  { label:'Sour cream',  w:58, h:20, corner:9,  base:'#ffffff', dark:'#e6e2d8', deco:'swirl', decoColor:'#d8d2c4', density:.0008, friction:1.15 },
+  meat:       { label:'Taco meat',   w:74, h:24, corner:10, art:'crumble',                base:'#a86b3d', dark:'#5c3013', density:.0018, friction:1.15 },
+  shreds:     { label:'Cheese shreds',w:66, h:18, corner:8, art:'shreds',                 base:'#ffc25e', dark:'#e88a1d', density:.0009, friction:1.05 },
+  chili:      { label:'Chili pepper',w:56, h:20, corner:9,  art:'chili',                  base:'#ff5240', dark:'#a8180c', density:.001, friction:.95 },
+  tomcube:    { label:'Tomato cubes',w:44, h:20, corner:7,  art:'cubes',                  base:'#ff7a63', dark:'#c23a26', density:.0011, friction:1.0 },
+  guac:       { label:'Guacamole',   w:66, h:24, corner:11, art:'blob', deco:'chunks',    base:'#b3e068', dark:'#5f9629', density:.001, friction:1.2 },
+  sourcream:  { label:'Sour cream',  w:58, h:20, corner:9,  art:'swirl',                  base:'#ffffff', dark:'#ded6c4', density:.0008, friction:1.15 },
   // --- sundae ---
-  scoopP:     { label:'Berry scoop', w:56, h:42, corner:15, round:true, base:'#ffc2dc', dark:'#ef86b8', deco:'swirl', decoColor:'#ffffff', density:.001, friction:.85, face:true },
-  scoopC:     { label:'Choco scoop', w:56, h:42, corner:15, round:true, base:'#a5714b', dark:'#77492b', deco:'swirl', decoColor:'#c99a72', density:.001, friction:.85, face:true },
-  scoopM:     { label:'Minty scoop', w:56, h:42, corner:15, round:true, base:'#a7ecc9', dark:'#68c996', deco:'dots', decoColor:'#4da377', density:.001, friction:.85, face:true },
-  whip:       { label:'Whippy swirl',w:60, h:30, corner:13, base:'#ffffff', dark:'#e9e2f7', deco:'swirl', decoColor:'#d5c8ec', density:.0008, friction:.95 },
-  cherry:     { label:'Cherry',      w:30, h:24, corner:9, round:true, base:'#ff4d6d', dark:'#c21f3f', deco:'gloss', stem:true, density:.0011, friction:.85, face:true },
-  wafer:      { label:'Wafer',       w:78, h:12, corner:5,  base:'#f2c98a', dark:'#d8a45c', deco:'stripes', decoColor:'#c2894a', density:.0009, friction:1.0 },
+  scoopP:     { label:'Berry scoop', w:56, h:42, corner:15, art:'scoop',                  base:'#ffd2e4', dark:'#ef86b8', density:.001, friction:.85 },
+  scoopC:     { label:'Choco scoop', w:56, h:42, corner:15, art:'scoop',                  base:'#b3805c', dark:'#6b3f22', density:.001, friction:.85 },
+  scoopM:     { label:'Minty scoop', w:56, h:42, corner:15, art:'scoop', deco:'chips',    base:'#bdf2d8', dark:'#5cb388', density:.001, friction:.85 },
+  whip:       { label:'Whipped swirl',w:60, h:30, corner:13, art:'swirl',                 base:'#ffffff', dark:'#ddd2f0', density:.0008, friction:.95 },
+  cherry:     { label:'Cherry',      w:30, h:24, corner:9,  art:'cherry',                 base:'#ff4d6d', dark:'#a8102e', density:.0011, friction:.85 },
+  wafer:      { label:'Wafer',       w:78, h:12, corner:5,  art:'cyl', deco:'waffle',     base:'#f2c98a', dark:'#c28c4a', density:.0009, friction:1.0 },
 };
 
 // ============================================================
@@ -62,27 +62,27 @@ const T = {
 const LEVELS = [
   { id:'pancakes', name:'Pancake Peak', emoji:'🥞', dish:'pancake',
     sky:['#8ec9ff','#ffd9a8'], hill:'#ffb26b', hill2:'#ff8f5e',
-    target:6,  sweep:1.0,
+    target:6,  sweep:1.0, dropEvery:3600,
     pool:['butter','cream','strawberry','jam','scoop','banana'],
     intro:'Stack 6 yummy toppings on the pancakes!' },
   { id:'pizza', name:'Pizza Tower', emoji:'🍕', dish:'pizza',
     sky:['#ffbe76','#ff7979'], hill:'#e05656', hill2:'#c23e3e',
-    target:8,  sweep:1.12,
+    target:8,  sweep:1.12, dropEvery:3100,
     pool:['cheese','ham','pepperoni','mushroom','olive','pepper'],
     intro:'Mamma mia! Stack 8 pizza toppings!' },
   { id:'burger', name:'Burger Mountain', emoji:'🍔', dish:'burger',
     sky:['#7ed6df','#f6e58d'], hill:'#6ab04c', hill2:'#4f8c38',
-    target:9,  sweep:1.25,
+    target:9,  sweep:1.25, dropEvery:2800,
     pool:['patty','chzslice','lettuce','tomato','pickle','bacon','onion'],
     intro:'Watch out — pickles are bouncy! Stack 9!' },
   { id:'taco', name:'Taco Volcano', emoji:'🌮', dish:'taco',
     sky:['#f8c291','#e55039'], hill:'#b3552d', hill2:'#8e3e1f',
-    target:10, sweep:1.35, wind:true,
+    target:10, sweep:1.35, dropEvery:2500, wind:true,
     pool:['meat','shreds','chili','tomcube','guac','sourcream'],
     intro:'A windy one! Stack 10 in the crunchy shell!' },
   { id:'sundae', name:'Sundae Sky', emoji:'🍨', dish:'sundae',
     sky:['#c8a2ff','#ffc2dc'], hill:'#9b6bd6', hill2:'#7d4fbd',
-    target:12, sweep:1.5, slippery:true,
+    target:12, sweep:1.5, dropEvery:2200, slippery:true,
     pool:['scoopP','scoopC','scoopM','whip','cherry','wafer'],
     intro:'Slippery scoops! Stack 12 to the sky!' },
 ];
@@ -138,6 +138,7 @@ const G = {
   preview: null,       // topping def waiting in the dispenser
   hearts: 3, landed: 0, score: 0, combo: 1,
   disp: { t: 0, x: W / 2 },
+  autoT: 0,            // ms until the dispenser auto-drops
   wind: { on: false, t: 0 },
   particles: [],
   munchy: { mouth: 0, blink: 0, drool: 0, happy: 0 },
@@ -305,6 +306,7 @@ function nextPreview(){
   const lv = LEVELS[G.levelIndex];
   if (!G.queue.length) refillQueue(lv);
   G.preview = T[G.queue.shift()];
+  G.autoT = lv.dropEvery;   // countdown until the cloud lets go by itself
 }
 
 function dropTopping(){
@@ -505,6 +507,11 @@ function stepGame(){
       G.spawnDelay -= dt;
       if (G.spawnDelay <= 0 && !G.preview && !G.falling) nextPreview();
     }
+    // the cloud drops the topping by itself when the countdown runs out
+    if (G.preview && !G.falling) {
+      G.autoT -= dt;
+      if (G.autoT <= 0) dropTopping();
+    }
   }
 
   // --- wind gimmick ---
@@ -623,87 +630,398 @@ function puffy(x, y, w, h, r, top, bottom, round){
   ctx.fill();
 }
 
-function drawFace(w, h, mood){
-  // tiny sleepy face on the front of a topping
-  const ey = -h * .06;
-  ctx.fillStyle = '#3a2436';
-  ctx.beginPath(); ctx.arc(-w * .16, ey, 2.6, 0, Math.PI * 2); ctx.arc(w * .16, ey, 2.6, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = '#3a2436'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+// ============================================================
+// Food art — soft dimensional "candy clay" renderer
+// Every food is drawn at the origin, upright, inside its
+// physics bounding box (w × h). Light comes from the top left.
+// ============================================================
+const TAU = Math.PI * 2;
+
+function sheen(x, y, rx, ry, a, rot){
+  ctx.fillStyle = `rgba(255,255,255,${a})`;
+  ctx.beginPath(); ctx.ellipse(x, y, rx, ry, rot || -.4, 0, TAU); ctx.fill();
+}
+
+// ball with 3D radial shading + specular dot
+function ball(x, y, rx, ry, base, dark){
+  const g = ctx.createRadialGradient(x - rx * .4, y - ry * .5, rx * .12, x, y, Math.max(rx, ry) * 1.25);
+  g.addColorStop(0, shade(base, 1.18));
+  g.addColorStop(.55, base);
+  g.addColorStop(1, dark);
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, TAU); ctx.fill();
+  ctx.strokeStyle = shade(dark, .85); ctx.lineWidth = 1.6; ctx.stroke();
+  sheen(x - rx * .35, y - ry * .45, rx * .3, ry * .22, .55);
+}
+
+// the workhorse: a glossy squat cylinder (any sliced / flat food),
+// top face gets an optional decoration callback(rx, ry)
+function cylinder(w, h, base, dark, deco){
+  const rx = w / 2;
+  const ry = Math.min(h * .34, rx * .55);
+  const yT = -h / 2 + ry, yB = h / 2 - ry;
+
+  // side wall
+  const gs = ctx.createLinearGradient(0, yT, 0, yB + ry);
+  gs.addColorStop(0, shade(base, .9));
+  gs.addColorStop(1, dark);
+  ctx.fillStyle = gs;
   ctx.beginPath();
-  if (mood === 'worried') ctx.arc(0, h * .22, 4, Math.PI * 1.1, Math.PI * 1.9);
-  else ctx.arc(0, h * .1, 5, .3, Math.PI - .3);
-  ctx.stroke();
+  ctx.moveTo(-rx, yT);
+  ctx.lineTo(-rx, yB);
+  ctx.ellipse(0, yB, rx, ry, 0, Math.PI, 0, true);   // bottom bulge
+  ctx.lineTo(rx, yT);
+  ctx.ellipse(0, yT, rx, ry, 0, 0, Math.PI, false);  // under the lid
+  ctx.fill();
+
+  // lid
+  const gt = ctx.createLinearGradient(-rx * .6, yT - ry, rx * .3, yT + ry);
+  gt.addColorStop(0, shade(base, 1.16));
+  gt.addColorStop(1, base);
+  ctx.fillStyle = gt;
+  ctx.beginPath(); ctx.ellipse(0, yT, rx, ry, 0, 0, TAU); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.12)'; ctx.lineWidth = 1.2; ctx.stroke();
+
+  // silhouette outline
+  ctx.strokeStyle = shade(dark, .82); ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(0, yT, rx, ry, 0, Math.PI, 0, false);  // top rim
+  ctx.lineTo(rx, yB);
+  ctx.ellipse(0, yB, rx, ry, 0, 0, Math.PI, false);
+  ctx.closePath(); ctx.stroke();
+
+  sheen(-rx * .32, yT - ry * .2, rx * .4, ry * .5, .4);
+  if (deco) { ctx.save(); ctx.translate(0, yT); deco(rx, ry); ctx.restore(); }
+}
+
+// decorations painted on a cylinder lid (coords already at lid centre)
+const LID = {
+  banana(rx, ry){
+    ctx.fillStyle = 'rgba(255,252,222,.9)';
+    ctx.beginPath(); ctx.ellipse(0, 0, rx * .72, ry * .68, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#c9a23e';
+    for (const a of [.6, 2.7, 4.6]) {
+      ctx.beginPath(); ctx.ellipse(Math.cos(a) * rx * .2, Math.sin(a) * ry * .25, 2, 1.2, a, 0, TAU); ctx.fill();
+    }
+  },
+  holes(rx, ry){
+    ctx.fillStyle = 'rgba(150,100,10,.5)';
+    for (const [x, y, r] of [[-.4, -.2, .16], [.1, .3, .12], [.45, -.25, .13], [-.05, -.4, .09]]) {
+      ctx.beginPath(); ctx.ellipse(x * rx, y * ry, r * rx, r * rx * ry / rx * 2.4, 0, 0, TAU); ctx.fill();
+    }
+  },
+  pepperoni(rx, ry){
+    ctx.strokeStyle = 'rgba(120,20,15,.55)'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.ellipse(0, 0, rx * .82, ry * .78, 0, 0, TAU); ctx.stroke();
+    for (const [x, y, r, w] of [[-.35, -.1, .1, 1], [.2, .25, .08, 1], [.4, -.3, .07, 0], [-.1, .45, .06, 0], [.05, -.15, .07, 1], [-.5, .3, .06, 0]]) {
+      ctx.fillStyle = w ? 'rgba(255,220,200,.75)' : 'rgba(110,15,12,.6)';
+      ctx.beginPath(); ctx.ellipse(x * rx, y * ry, r * rx, r * rx * .7, .4, 0, TAU); ctx.fill();
+    }
+  },
+  tomato(rx, ry){
+    ctx.fillStyle = 'rgba(255,150,130,.85)';
+    ctx.beginPath(); ctx.ellipse(0, 0, rx * .78, ry * .72, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(255,220,200,.9)';
+    for (let i = 0; i < 6; i++) {
+      const a = i / 6 * TAU;
+      ctx.beginPath();
+      ctx.ellipse(Math.cos(a) * rx * .42, Math.sin(a) * ry * .4, rx * .16, ry * .2, a, 0, TAU);
+      ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(255,120,100,1)';
+    ctx.beginPath(); ctx.ellipse(0, 0, rx * .14, ry * .16, 0, 0, TAU); ctx.fill();
+  },
+  pickle(rx, ry){
+    ctx.strokeStyle = 'rgba(240,255,200,.8)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(0, 0, rx * .68, ry * .62, 0, 0, TAU); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,225,.8)';
+    for (const a of [.4, 1.6, 2.9, 4.2, 5.4]) {
+      ctx.beginPath(); ctx.ellipse(Math.cos(a) * rx * .38, Math.sin(a) * ry * .35, 1.8, 1.2, a, 0, TAU); ctx.fill();
+    }
+  },
+  onion(rx, ry){
+    ctx.fillStyle = 'rgba(160,120,190,.35)';
+    ctx.beginPath(); ctx.ellipse(0, ry * .05, rx * .55, ry * .5, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(0, 0, rx * .72, ry * .66, 0, 0, TAU); ctx.stroke();
+  },
+  olive(rx, ry){
+    ctx.fillStyle = '#2c3510';
+    ctx.beginPath(); ctx.ellipse(0, 0, rx * .42, ry * .45, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#e85c40';
+    ctx.beginPath(); ctx.ellipse(0, ry * .05, rx * .22, ry * .24, 0, 0, TAU); ctx.fill();
+  },
+  char(rx, ry){
+    ctx.strokeStyle = 'rgba(60,28,10,.55)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    for (const [x0, y0, x1, y1] of [[-.6, -.2, -.15, -.35], [-.3, .3, .3, .2], [.15, -.3, .6, -.1]]) {
+      ctx.beginPath(); ctx.moveTo(x0 * rx, y0 * ry); ctx.lineTo(x1 * rx, y1 * ry); ctx.stroke();
+    }
+  },
+  waffle(rx, ry){
+    ctx.strokeStyle = 'rgba(140,90,40,.5)'; ctx.lineWidth = 1.6;
+    for (const t of [-.5, 0, .5]) {
+      ctx.beginPath(); ctx.moveTo(-rx * .85, t * ry); ctx.lineTo(rx * .85, t * ry); ctx.stroke();
+    }
+    for (const t of [-.66, -.33, 0, .33, .66]) {
+      ctx.beginPath(); ctx.moveTo(t * rx, -ry * .8); ctx.lineTo(t * rx, ry * .8); ctx.stroke();
+    }
+  },
+};
+
+// custom silhouettes
+const ART = {
+  cyl(def){ cylinder(def.w, def.h, def.base, def.dark, LID[def.deco]); },
+
+  swirl(def){
+    const { w, h, base, dark } = def;
+    // soft-serve: three squashy lobes + a curled tip
+    ball(0, h * .26, w * .48, h * .3, base, dark);
+    ball(0, -h * .02, w * .37, h * .26, base, dark);
+    ball(w * .04, -h * .28, w * .23, h * .2, base, dark);
+    ctx.strokeStyle = shade(dark, .96); ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(w * .16, -h * .4); ctx.quadraticCurveTo(w * .3, -h * .52, w * .2, -h * .58); ctx.stroke();
+  },
+
+  scoop(def){
+    const { w, h, base, dark } = def;
+    const rx = w / 2;
+    // dome with a scalloped melt edge
+    const g = ctx.createRadialGradient(-rx * .35, -h * .3, rx * .15, 0, -h * .05, rx * 1.35);
+    g.addColorStop(0, shade(base, 1.15));
+    g.addColorStop(.6, base);
+    g.addColorStop(1, dark);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(-rx, h * .18);
+    ctx.ellipse(0, h * .18, rx, h * .66, 0, Math.PI, 0, false); // dome
+    for (let i = 3; i >= 0; i--) {                              // 4 melt bumps
+      const x0 = -rx + (i + 1) * (w / 4), x1 = -rx + i * (w / 4);
+      ctx.arc((x0 + x1) / 2, h * .18, w / 8, 0, Math.PI, false);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = shade(dark, .85); ctx.lineWidth = 2; ctx.stroke();
+    sheen(-rx * .35, -h * .22, rx * .34, h * .18, .5);
+    if (def.deco === 'chips') {
+      ctx.fillStyle = '#4a2f1d';
+      for (const [x, y] of [[-.4, -.1], [.1, -.3], [.35, .0], [-.1, .1], [.2, .3]]) {
+        ctx.beginPath(); ctx.ellipse(x * rx, y * h * .4, 2.4, 1.8, .5, 0, TAU); ctx.fill();
+      }
+    }
+  },
+
+  berry(def){
+    const { w, h, base, dark } = def;
+    const rx = w / 2;
+    const g = ctx.createRadialGradient(-rx * .3, -h * .25, rx * .1, 0, 0, rx * 1.4);
+    g.addColorStop(0, shade(base, 1.15));
+    g.addColorStop(.55, base);
+    g.addColorStop(1, dark);
+    ctx.fillStyle = g;
+    ctx.beginPath();                                  // plump heart
+    ctx.moveTo(0, h * .5);
+    ctx.bezierCurveTo(-w * .68, h * .16, -w * .5, -h * .52, 0, -h * .3);
+    ctx.bezierCurveTo(w * .5, -h * .52, w * .68, h * .16, 0, h * .5);
+    ctx.fill();
+    ctx.strokeStyle = shade(dark, .85); ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,235,190,.85)';          // seeds
+    for (const [x, y] of [[-.25, -.05], [.25, -.05], [0, .12], [-.14, .3], [.14, .3], [0, -.22]]) {
+      ctx.beginPath(); ctx.ellipse(x * w, y * h, 1.6, 2.4, 0, 0, TAU); ctx.fill();
+    }
+    ctx.fillStyle = '#5fae35';                        // leafy crown
+    for (const a of [-.9, -.3, .3, .9]) {
+      ctx.beginPath(); ctx.ellipse(a * w * .16, -h * .38, 6.5, 3, a * .7 - .2, 0, TAU); ctx.fill();
+    }
+    sheen(-w * .18, -h * .16, w * .16, h * .12, .45);
+  },
+
+  cherry(def){
+    const { w, h, base, dark } = def;
+    ball(0, h * .08, w * .48, h * .42, base, dark);
+    ctx.strokeStyle = '#5a8c2e'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, -h * .3); ctx.quadraticCurveTo(w * .18, -h * .75, w * .34, -h * .62); ctx.stroke();
+    sheen(-w * .16, -h * .1, w * .13, h * .12, .7);
+  },
+
+  blob(def){
+    const { w, h, base, dark } = def;
+    const g = ctx.createRadialGradient(-w * .2, -h * .3, w * .08, 0, 0, w * .75);
+    g.addColorStop(0, shade(base, 1.14));
+    g.addColorStop(.6, base);
+    g.addColorStop(1, dark);
+    ctx.fillStyle = g;
+    ctx.beginPath();                                  // squishy blob + drips
+    ctx.ellipse(0, -h * .08, w * .5, h * .38, 0, 0, TAU);
+    ctx.ellipse(-w * .22, h * .28, w * .13, h * .22, 0, 0, TAU);
+    ctx.ellipse(w * .18, h * .3, w * .1, h * .18, 0, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = shade(dark, .88); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(0, -h * .08, w * .5, h * .38, 0, 0, TAU); ctx.stroke();
+    if (def.deco === 'chunks') {
+      ctx.fillStyle = shade(dark, 1.25);
+      for (const [x, y] of [[-.28, -.15], [.1, .05], [.3, -.2], [-.05, -.3]]) {
+        ctx.beginPath(); ctx.ellipse(x * w, y * h, 3.4, 2.6, .4, 0, TAU); ctx.fill();
+      }
+    }
+    sheen(-w * .2, -h * .26, w * .18, h * .12, .5);
+  },
+
+  ruffle(def){
+    const { w, h, base, dark } = def;
+    const n = 7, rx = w / 2;
+    const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+    g.addColorStop(0, shade(base, 1.08));
+    g.addColorStop(1, dark);
+    ctx.fillStyle = g;
+    ctx.beginPath();                                  // frilly leaf
+    ctx.moveTo(-rx, 0);
+    for (let i = 0; i < n; i++)
+      ctx.quadraticCurveTo(-rx + (i + .5) * (w / n), -h * (i % 2 ? .9 : .55), -rx + (i + 1) * (w / n), 0);
+    for (let i = n - 1; i >= 0; i--)
+      ctx.quadraticCurveTo(-rx + (i + .5) * (w / n), h * (i % 2 ? .55 : .9), -rx + i * (w / n), 0);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = shade(dark, .85); ctx.lineWidth = 1.8; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-rx * .8, 0); ctx.quadraticCurveTo(0, -h * .2, rx * .8, 0); ctx.stroke();
+  },
+
+  bacon(def){
+    const { w, h, base, dark } = def;
+    const rx = w / 2, amp = h * .5;
+    const wave = (y0, dir) => {
+      ctx.moveTo(-rx, y0);
+      ctx.quadraticCurveTo(-rx * .5, y0 + dir * amp, 0, y0);
+      ctx.quadraticCurveTo(rx * .5, y0 - dir * amp, rx, y0);
+    };
+    const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+    g.addColorStop(0, base);
+    g.addColorStop(1, dark);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    wave(-h * .34, 1);
+    ctx.lineTo(rx, h * .34);
+    ctx.quadraticCurveTo(rx * .5, h * .34 - amp, 0, h * .34);
+    ctx.quadraticCurveTo(-rx * .5, h * .34 + amp, -rx, h * .34);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = shade(dark, .85); ctx.lineWidth = 1.8; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,225,205,.85)'; ctx.lineWidth = 2.6; ctx.lineCap = 'round';
+    ctx.beginPath(); wave(0, 1); ctx.stroke();
+  },
+
+  crumble(def){
+    const { w, h, base, dark } = def;
+    for (const [x, y, r] of [[-.32, .12, .21], [.02, .2, .23], [.34, .1, .2], [-.16, -.14, .2], [.18, -.16, .19], [.0, -.02, .18]])
+      ball(x * w, y * h, r * w, r * w * .8, shade(base, .92 + r), dark);
+  },
+
+  shreds(def){
+    const { w, h, base, dark } = def;
+    ctx.lineCap = 'round';
+    const strands = [[-.4, .2, -.25, -.25, .05], [-.2, -.2, .0, .25, -.1], [.05, .2, .2, -.22, .15],
+                     [.25, -.18, .42, .18, .0], [-.35, -.05, -.1, .05, .3], [.1, -.02, .38, -.05, -.3]];
+    for (let i = 0; i < strands.length; i++) {
+      const [x0, y0, x1, y1, bend] = strands[i];
+      ctx.strokeStyle = i % 2 ? base : shade(dark, 1.15);
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(x0 * w, y0 * h);
+      ctx.quadraticCurveTo((x0 + x1) / 2 * w + bend * w * .3, (y0 + y1) / 2 * h - h * .3, x1 * w, y1 * h);
+      ctx.stroke();
+    }
+  },
+
+  chili(def){
+    const { w, h, base, dark } = def;
+    const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+    g.addColorStop(0, shade(base, 1.12));
+    g.addColorStop(1, dark);
+    ctx.fillStyle = g;
+    ctx.beginPath();                                  // curved pod, tip right
+    ctx.moveTo(-w * .42, -h * .28);
+    ctx.quadraticCurveTo(w * .1, -h * .62, w * .48, -h * .05);
+    ctx.quadraticCurveTo(w * .3, h * .12, w * .1, h * .3);
+    ctx.quadraticCurveTo(-w * .3, h * .5, -w * .46, h * .05);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = shade(dark, .85); ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#5a9633';                        // stem cap
+    ctx.beginPath();
+    ctx.ellipse(-w * .44, -h * .1, w * .1, h * .26, .3, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = '#4a7d2a'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-w * .48, -h * .26); ctx.quadraticCurveTo(-w * .56, -h * .55, -w * .44, -h * .62); ctx.stroke();
+    sheen(-w * .1, -h * .3, w * .2, h * .12, .45, -.15);
+  },
+
+  cubes(def){
+    const { w, h, base, dark } = def;
+    for (const [cx, cy, s] of [[-.3, .1, .42], [.08, -.05, .46], [.36, .12, .38]]) {
+      const x = cx * w, y = cy * h, r = s * h;
+      ctx.fillStyle = shade(base, 1.1);                       // top face
+      ctx.beginPath();
+      ctx.moveTo(x - r, y - r * .5); ctx.lineTo(x - r * .4, y - r); ctx.lineTo(x + r, y - r * .6); ctx.lineTo(x + r * .4, y - r * .1);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = dark;                                   // front face
+      rr(x - r, y - r * .5, r * 1.4, r * 1.2, 2); ctx.fill();
+      ctx.fillStyle = base;
+      rr(x - r * .85, y - r * .35, r * 1.1, r * .9, 2); ctx.fill();
+      sheen(x - r * .4, y - r * .1, r * .3, r * .2, .4);
+    }
+  },
+
+  mushroom(def){
+    const { w, h, base, dark } = def;
+    const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+    g.addColorStop(0, shade(base, 1.1));
+    g.addColorStop(1, shade(base, .92));
+    ctx.fillStyle = g;
+    ctx.beginPath();                                  // cross-section: cap + stem
+    ctx.moveTo(-w * .5, -h * .05);
+    ctx.ellipse(0, -h * .05, w * .5, h * .42, 0, Math.PI, 0, false);
+    ctx.lineTo(w * .16, -h * .05);
+    ctx.lineTo(w * .13, h * .5);
+    ctx.lineTo(-w * .13, h * .5);
+    ctx.lineTo(-w * .16, -h * .05);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = dark; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = shade(dark, 1.25); ctx.lineWidth = 1.4;   // gills
+    for (const t of [-.36, -.24, .24, .36]) {
+      ctx.beginPath(); ctx.moveTo(t * w, -h * .04); ctx.lineTo(t * w * .55, h * .06); ctx.stroke();
+    }
+    sheen(-w * .2, -h * .3, w * .18, h * .12, .4);
+  },
+
+  pepperstrip(def){
+    const { w, h, base, dark } = def;
+    const g = ctx.createLinearGradient(0, -h, 0, h / 2);
+    g.addColorStop(0, shade(base, 1.1));
+    g.addColorStop(1, dark);
+    ctx.fillStyle = g;
+    ctx.beginPath();                                  // arched strip
+    ctx.moveTo(-w * .5, h * .28);
+    ctx.quadraticCurveTo(0, -h * .95, w * .5, h * .28);
+    ctx.lineTo(w * .34, h * .5);
+    ctx.quadraticCurveTo(0, -h * .25, -w * .34, h * .5);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = shade(dark, .85); ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-w * .36, h * .16); ctx.quadraticCurveTo(0, -h * .6, w * .36, h * .16); ctx.stroke();
+  },
+};
+
+function drawFood(def){
+  (ART[def.art] || ART.cyl)(def);
 }
 
 function drawTopping(b){
   const def = b.plugin.def;
-  const w = def.w, h = def.h;
   ctx.save();
   ctx.translate(b.position.x, b.position.y);
   ctx.rotate(b.angle);
-
-  // soft drop shadow under piece
-  ctx.fillStyle = 'rgba(60,20,60,.18)';
+  // soft contact shadow
+  ctx.fillStyle = 'rgba(60,20,60,.16)';
   ctx.beginPath();
-  ctx.ellipse(0, h / 2 + 3, w * .42, 4.5, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, def.h / 2 + 3, def.w * .44, 4.5, 0, 0, TAU);
   ctx.fill();
-
-  puffy(-w / 2, -h / 2, w, h, def.corner, def.base, def.dark, def.round);
-
-  const pts = seededPts(b.plugin.seed, 6);
-  ctx.lineCap = 'round';
-  switch (def.deco) {
-    case 'dots':
-      ctx.fillStyle = def.decoColor;
-      for (let i = 0; i < 5; i++) {
-        ctx.beginPath();
-        ctx.arc(pts[i][0] * w * .3, pts[i][1] * h * .26, 2.4 + pts[i][2] * 2.2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      break;
-    case 'seeds':
-      ctx.strokeStyle = def.decoColor; ctx.lineWidth = 2;
-      for (let i = 0; i < 6; i++) {
-        const px = pts[i][0] * w * .3, py = pts[i][1] * h * .28;
-        ctx.beginPath(); ctx.moveTo(px, py - 2); ctx.lineTo(px, py + 2); ctx.stroke();
-      }
-      break;
-    case 'swirl':
-      ctx.strokeStyle = def.decoColor; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(-w * .12, 0, h * .22, .4, Math.PI * 1.4); ctx.stroke();
-      ctx.beginPath(); ctx.arc(w * .2, h * .06, h * .15, Math.PI * .8, Math.PI * 1.9); ctx.stroke();
-      break;
-    case 'stripes':
-      ctx.strokeStyle = def.decoColor; ctx.lineWidth = 3;
-      for (const off of [-.22, 0, .22]) {
-        ctx.beginPath();
-        ctx.moveTo(-w * .38, off * h * 2);
-        ctx.quadraticCurveTo(0, off * h * 2 + 3, w * .38, off * h * 2);
-        ctx.stroke();
-      }
-      break;
-    case 'holes':
-      ctx.fillStyle = def.decoColor;
-      for (const [hx, hy, hr] of [[-.26, -.1, 4], [.1, .15, 3], [.3, -.15, 3.5]]) {
-        ctx.beginPath(); ctx.arc(hx * w, hy * h, hr, 0, Math.PI * 2); ctx.fill();
-      }
-      break;
-    case 'ring':
-      ctx.strokeStyle = def.decoColor; ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.ellipse(0, 0, w * .22, h * .22, 0, 0, Math.PI * 2); ctx.stroke();
-      break;
-    case 'cap':
-      ctx.fillStyle = def.decoColor;
-      rr(-w * .18, -h * .1, w * .36, h * .55, 5); ctx.fill();
-      break;
-  }
-  if (def.stem) {
-    ctx.strokeStyle = '#4e8c2a'; ctx.lineWidth = 3.5;
-    ctx.beginPath(); ctx.moveTo(0, -h / 2 + 2); ctx.quadraticCurveTo(4, -h / 2 - 7, 9, -h / 2 - 9); ctx.stroke();
-    ctx.fillStyle = '#6fbf3e';
-    ctx.beginPath(); ctx.ellipse(10, -h / 2 - 9, 5, 3, .5, 0, Math.PI * 2); ctx.fill();
-  }
-  if (def.face) drawFace(w, h, b.plugin.state === 'falling' ? 'worried' : 'happy');
+  drawFood(def);
   ctx.restore();
 }
 
@@ -861,15 +1179,34 @@ function drawDispenser(){
   // hanging preview topping
   if (G.preview && G.state === 'play') {
     const def = G.preview;
-    const sway = Math.sin(G.time * .004) * .06;
+    const lv = LEVELS[G.levelIndex];
+    const frac = Math.max(0, G.autoT / lv.dropEvery);
+    const urgent = G.autoT < 900;
+    const sway = Math.sin(G.time * .004) * .06 + (urgent ? Math.sin(G.time * .04) * .04 : 0);
     ctx.save();
     ctx.translate(x, y + 26);
     ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(Math.sin(sway) * 30, 26); ctx.stroke();
     ctx.translate(Math.sin(sway) * 30, 26 + def.h / 2);
     ctx.rotate(sway);
-    puffy(-def.w / 2, -def.h / 2, def.w, def.h, def.corner, def.base, def.dark, def.round);
+    drawFood(def);
     ctx.restore();
+
+    // countdown bar above the cloud — the topping drops when it empties
+    const bw = 56, bx = x - bw / 2, by = y - 38;
+    ctx.fillStyle = 'rgba(90,60,120,.3)';
+    rr(bx, by, bw, 9, 4.5); ctx.fill();
+    ctx.fillStyle = urgent ? '#ff6e6e' : '#ffffff';
+    rr(bx, by, Math.max(9, bw * frac), 9, 4.5); ctx.fill();
+
+    // topping name under the preview
+    ctx.font = '800 14px "Baloo 2","Comic Sans MS",ui-rounded,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(90,30,90,.55)';
+    const ly = y + 62 + def.h;
+    ctx.strokeText(def.label, x, ly);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(def.label, x, ly);
   }
 }
 
@@ -903,19 +1240,40 @@ function drawBG(){
     ctx.restore();
   }
 
-  // hills
-  ctx.fillStyle = lv.hill2;
-  ctx.beginPath();
-  ctx.moveTo(0, H); ctx.lineTo(0, H - 120);
-  ctx.quadraticCurveTo(W * .3, H - 210, W * .6, H - 130);
-  ctx.quadraticCurveTo(W * .82, H - 80, W, H - 125);
-  ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = lv.hill;
-  ctx.beginPath();
-  ctx.moveTo(0, H); ctx.lineTo(0, H - 70);
-  ctx.quadraticCurveTo(W * .25, H - 140, W * .55, H - 75);
-  ctx.quadraticCurveTo(W * .8, H - 30, W, H - 70);
-  ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+  // dreamy cloud sea at the bottom (two tinted banks)
+  const bank = (yBase, color, rBase, phase) => {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.rect(0, yBase + rBase * .4, W, H - yBase);
+    for (let i = 0; i <= 7; i++) {
+      const bx = i * (W / 7) + Math.sin(i * 2.4 + phase) * 18;
+      const by = yBase + Math.sin(i * 1.7 + phase + G.time * .0004) * 10;
+      const r = rBase * (0.75 + 0.5 * Math.abs(Math.sin(i * 3.1 + phase)));
+      ctx.moveTo(bx + r, by);
+      ctx.arc(bx, by, r, 0, TAU);
+    }
+    ctx.fill();
+  };
+  bank(H - 115, shade(lv.hill2, 1.35), 52, 1.3);
+  bank(H - 55,  shade(lv.hill, 1.5),  62, 4.1);
+
+  // twinkling sparkles in the air
+  for (let i = 0; i < 18; i++) {
+    const sx = (i * 137.5) % W;
+    const sy = 120 + ((i * 211.3) % (H - 320));
+    const tw = Math.abs(Math.sin(G.time * .0012 + i * 1.7));
+    if (tw < .35) continue;
+    ctx.globalAlpha = (tw - .35) * .9;
+    ctx.fillStyle = '#ffffff';
+    const r = 1.2 + tw * 2.2;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy - r * 2); ctx.quadraticCurveTo(sx + r * .5, sy - r * .5, sx + r * 2, sy);
+    ctx.quadraticCurveTo(sx + r * .5, sy + r * .5, sx, sy + r * 2);
+    ctx.quadraticCurveTo(sx - r * .5, sy + r * .5, sx - r * 2, sy);
+    ctx.quadraticCurveTo(sx - r * .5, sy - r * .5, sx, sy - r * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 
   // wind streaks
   if (G.wind.on) {
