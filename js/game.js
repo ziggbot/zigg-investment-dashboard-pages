@@ -91,7 +91,7 @@ const LEVELS = [
 // Save data
 // ============================================================
 const SAVE_KEY = 'pancakePartySave1';
-let save = { stars:{}, best:{}, muted:false };
+let save = { stars:{}, best:{}, muted:false, controls:'camera' };
 try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); } catch (e) {}
 function persist(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 
@@ -122,6 +122,80 @@ const Snd = {
   win(){ [523, 659, 784, 1046].forEach((f, i) => this.tone(f, .18, 'triangle', .2, i * .12)); },
   fail(){ [392, 330, 262, 196].forEach((f, i) => this.tone(f, .25, 'triangle', .16, i * .16)); },
 };
+
+// ============================================================
+// Camera hand control — no ML model needed: we track the motion
+// centroid of the (mirrored) webcam image and steer the plate
+// with it. A still scene holds the plate in place.
+// ============================================================
+const Cam = {
+  active: false, starting: false, failed: false,
+  video: null, stream: null, cv: null, cctx: null,
+  prev: null, x: null, seen: 0, ready: false,
+  CW: 64, CH: 48,
+
+  async start(){
+    if (this.active || this.starting) return this.active;
+    this.starting = true;
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('no camera api');
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 320 }, height: { ideal: 240 } },
+        audio: false,
+      });
+      if (!this.video) {
+        this.video = document.createElement('video');
+        this.video.setAttribute('playsinline', '');
+        this.video.muted = true;
+        this.cv = document.createElement('canvas');
+        this.cv.width = this.CW; this.cv.height = this.CH;
+        this.cctx = this.cv.getContext('2d', { willReadFrequently: true });
+      }
+      this.video.srcObject = this.stream;
+      await this.video.play();
+      this.prev = null; this.x = null; this.ready = false;
+      this.active = true; this.failed = false;
+    } catch (e) {
+      this.failed = true; this.active = false;
+    }
+    this.starting = false;
+    return this.active;
+  },
+
+  stop(){
+    if (this.stream) for (const t of this.stream.getTracks()) t.stop();
+    this.stream = null; this.active = false; this.ready = false; this.x = null; this.prev = null;
+  },
+
+  tick(){
+    if (!this.active || !this.video || this.video.readyState < 2) { this.ready = false; return; }
+    const cw = this.CW, ch = this.CH;
+    this.cctx.drawImage(this.video, 0, 0, cw, ch);
+    let img;
+    try { img = this.cctx.getImageData(0, 0, cw, ch).data; } catch (e) { return; }
+    if (!this.prev) {
+      this.prev = new Float32Array(cw * ch);
+      for (let i = 0; i < cw * ch; i++) this.prev[i] = (img[i * 4] + img[i * 4 + 1] + img[i * 4 + 2]) / 3;
+      return;
+    }
+    let count = 0, sx = 0;
+    for (let i = 0; i < cw * ch; i++) {
+      const j = i * 4;
+      const g = (img[j] + img[j + 1] + img[j + 2]) / 3;
+      const d = Math.abs(g - this.prev[i]);
+      this.prev[i] = g;
+      if (d > 22) { count++; sx += i % cw; }
+    }
+    if (count > 7) {
+      const mx = 1 - (sx / count) / (cw - 1);   // mirror: your hand, your side
+      this.x = this.x == null ? mx : this.x + (mx - this.x) * .3;
+      this.seen = performance.now();
+    }
+    this.ready = this.x != null && performance.now() - this.seen < 2000;
+  },
+};
+
+function cameraOn(){ return save.controls === 'camera' && Cam.active; }
 
 // ============================================================
 // Game state
@@ -292,6 +366,19 @@ function startLevel(i){
   showScreen(null);
   updateHUD();
   textPop(W / 2, 300, lv.intro, '#ffffff', 2600, 19);
+
+  if (save.controls === 'camera' && !Cam.active) {
+    Cam.start().then(ok => {
+      if (ok) {
+        textPop(W / 2, 360, 'Wave your hand ✋ to steer!', '#ffffff', 2600, 19);
+      } else {
+        save.controls = 'touch'; persist(); syncControls();
+        textPop(W / 2, 360, 'No camera found — touch control on!', '#ffffff', 2600, 17);
+      }
+    });
+  } else if (save.controls === 'camera') {
+    textPop(W / 2, 360, 'Wave your hand ✋ to steer!', '#ffffff', 2600, 19);
+  }
 }
 
 function destroyLevel(){
@@ -481,9 +568,11 @@ function stepGame(){
   if (!G.engine) return;
 
   // --- plate control ---
+  if (cameraOn()) Cam.tick();
   if (G.state === 'play' || G.state === 'settling') {
     if (G.keys.ArrowLeft || G.keys.a) G.plateTargetX -= .5 * dt;
     if (G.keys.ArrowRight || G.keys.d) G.plateTargetX += .5 * dt;
+    if (cameraOn() && Cam.ready) G.plateTargetX = 96 + Cam.x * (W - 192);
   }
   G.plateTargetX = Math.max(96, Math.min(W - 96, G.plateTargetX));
   const vx = Math.max(-9, Math.min(9, (G.plateTargetX - G.plate.position.x) * .14));
@@ -1316,6 +1405,25 @@ function render(){
     ctx.fillStyle = 'rgba(120,80,255,.1)';
     ctx.fillRect(0, 0, W, H);
   }
+
+  // little mirrored camera preview so kids see themselves steering
+  if (cameraOn() && (G.state === 'play' || G.state === 'settling') && Cam.video && Cam.video.readyState >= 2) {
+    const pw = 92, ph = 69, px = W - pw - 10, py = H - ph - 12;
+    ctx.save();
+    rr(px - 3, py - 3, pw + 6, ph + 6, 10);
+    ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fill();
+    rr(px, py, pw, ph, 8); ctx.clip();
+    ctx.translate(px + pw, py); ctx.scale(-1, 1);           // mirror
+    ctx.drawImage(Cam.video, 0, 0, pw, ph);
+    ctx.restore();
+    if (Cam.ready) {
+      const hx = px + Cam.x * pw;
+      ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(hx, py); ctx.lineTo(hx, py + ph); ctx.stroke();
+      ctx.font = '16px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('✋', hx, py - 6);
+    }
+  }
 }
 
 // ============================================================
@@ -1334,6 +1442,7 @@ function onPress(x){
 function onMove(x, isHover){
   if (ptr.down) ptr.moved = Math.max(ptr.moved, Math.abs(x - ptr.x0));
   if (G.state !== 'play' && G.state !== 'settling') return;
+  if (cameraOn()) return; // camera steers; touch only drops
   // mouse hover steers directly; a touch/press must actually DRAG before it
   // steers, so that a quick "drop" tap far from the plate doesn't lurch it
   if (isHover || (ptr.down && ptr.moved > 12)) G.plateTargetX = x;
@@ -1373,8 +1482,36 @@ $('btn-play').addEventListener('click', () => { Snd.ensure(); Snd.click(); build
 $('btn-back-title').addEventListener('click', () => { Snd.click(); showScreen('title'); });
 $('btn-retry').addEventListener('click', () => { Snd.click(); destroyLevel(); startLevel(G.levelIndex); });
 $('btn-next').addEventListener('click', () => { Snd.click(); destroyLevel(); startLevel(Math.min(LEVELS.length - 1, G.levelIndex + 1)); });
-$('btn-map').addEventListener('click', () => { Snd.click(); destroyLevel(); buildLevelList(); showScreen('levels'); });
-$('btn-quit').addEventListener('click', () => { Snd.click(); destroyLevel(); buildLevelList(); showScreen('levels'); });
+$('btn-map').addEventListener('click', () => { Snd.click(); destroyLevel(); Cam.stop(); buildLevelList(); showScreen('levels'); });
+$('btn-quit').addEventListener('click', () => { Snd.click(); destroyLevel(); Cam.stop(); buildLevelList(); showScreen('levels'); });
+
+function syncControls(){
+  $('btn-controls').textContent = save.controls === 'camera' ? '🎥 Camera control' : '👆 Touch control';
+  $('btn-cam').textContent = save.controls === 'camera' ? '🎥' : '👆';
+  $('hint-controls').innerHTML = save.controls === 'camera'
+    ? 'Wave your hand left and right to steer the plate!<br>Tap to make the cloud drop early.'
+    : 'Drag to steer the plate and catch the falling toppings!<br>Tap to make the cloud drop early.';
+}
+function toggleControls(){
+  Snd.ensure(); Snd.click();
+  save.controls = save.controls === 'camera' ? 'touch' : 'camera';
+  persist(); syncControls();
+  if (save.controls === 'camera') {
+    Cam.start().then(ok => {
+      if (!ok) {
+        save.controls = 'touch'; persist(); syncControls();
+        if (G.engine) textPop(W / 2, 360, 'No camera found — touch control on!', '#ffffff', 2600, 17);
+      } else if (G.engine) {
+        textPop(W / 2, 360, 'Wave your hand ✋ to steer!', '#ffffff', 2200, 19);
+      }
+    });
+  } else {
+    Cam.stop();
+  }
+}
+$('btn-controls').addEventListener('click', toggleControls);
+$('btn-cam').addEventListener('click', toggleControls);
+syncControls();
 
 const muteBtn = $('btn-mute');
 function syncMute(){ muteBtn.textContent = save.muted ? '🔇' : '🔊'; }
