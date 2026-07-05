@@ -988,22 +988,38 @@ function canvasX(e){
 }
 let ptr = { down: false, x0: 0, t0: 0, moved: 0 };
 
-canvas.addEventListener('pointerdown', e => {
+function onPress(x){
   Snd.ensure();
-  ptr.down = true; ptr.x0 = canvasX(e); ptr.t0 = performance.now(); ptr.moved = 0;
-  canvas.setPointerCapture(e.pointerId);
-});
-canvas.addEventListener('pointermove', e => {
-  const x = canvasX(e);
+  ptr.down = true; ptr.x0 = x; ptr.t0 = performance.now(); ptr.moved = 0;
+}
+function onMove(x, isHover){
   if (ptr.down) ptr.moved = Math.max(ptr.moved, Math.abs(x - ptr.x0));
-  if ((ptr.down || e.pointerType === 'mouse') && (G.state === 'play' || G.state === 'settling'))
-    G.plateTargetX = x;
-});
-canvas.addEventListener('pointerup', e => {
+  if (G.state !== 'play' && G.state !== 'settling') return;
+  // mouse hover steers directly; a touch/press must actually DRAG before it
+  // steers, so that a quick "drop" tap far from the plate doesn't lurch it
+  if (isHover || (ptr.down && ptr.moved > 12)) G.plateTargetX = x;
+}
+function onRelease(){
   if (!ptr.down) return;
   ptr.down = false;
   if (ptr.moved < 14 && performance.now() - ptr.t0 < 400) dropTopping();
-});
+}
+
+if (window.PointerEvent) {
+  canvas.addEventListener('pointerdown', e => { onPress(canvasX(e)); canvas.setPointerCapture(e.pointerId); e.preventDefault(); });
+  canvas.addEventListener('pointermove', e => onMove(canvasX(e), e.pointerType === 'mouse' && !ptr.down));
+  canvas.addEventListener('pointerup', () => onRelease());
+  canvas.addEventListener('pointercancel', () => { ptr.down = false; });
+} else {
+  // fallback for old browsers without pointer events
+  canvas.addEventListener('touchstart', e => { onPress(canvasX(e.touches[0])); e.preventDefault(); }, { passive: false });
+  canvas.addEventListener('touchmove', e => { onMove(canvasX(e.touches[0]), false); e.preventDefault(); }, { passive: false });
+  canvas.addEventListener('touchend', e => { onRelease(); e.preventDefault(); }, { passive: false });
+  canvas.addEventListener('mousedown', e => onPress(canvasX(e)));
+  canvas.addEventListener('mousemove', e => onMove(canvasX(e), !ptr.down));
+  canvas.addEventListener('mouseup', () => onRelease());
+}
+canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 window.addEventListener('keydown', e => {
   G.keys[e.key] = true;
