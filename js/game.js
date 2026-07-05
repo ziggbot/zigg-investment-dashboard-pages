@@ -136,7 +136,7 @@ const G = {
   falling: null,       // the currently dropping body
   queue: [],           // upcoming topping ids
   preview: null,       // topping def waiting in the dispenser
-  hearts: 3, landed: 0, score: 0, combo: 1,
+  misses: 0, landed: 0, score: 0, combo: 1,
   disp: { t: 0, x: W / 2 },
   autoT: 0,            // ms until the dispenser auto-drops
   wind: { on: false, t: 0 },
@@ -174,7 +174,7 @@ function showScreen(name){
 }
 
 function updateHUD(){
-  $('hud-hearts').textContent = '❤️'.repeat(G.hearts) + '🖤'.repeat(3 - G.hearts);
+  $('hud-hearts').textContent = `😋 ${G.misses}`;
   const lv = LEVELS[G.levelIndex];
   $('hud-level').textContent = `${lv.emoji} ${lv.name}`;
   $('hud-progress').textContent = `${G.landed} / ${lv.target}`;
@@ -218,19 +218,19 @@ function buildLevelList(){
 function makePlate(lv){
   const cx = W / 2;
   const opts = { friction: 1.2, frictionStatic: 2, restitution: 0, density: .05 };
-  const parts = [Bodies.rectangle(cx, PLATE_Y, 152, 16, { ...opts, chamfer: { radius: 7 } })];
+  const parts = [Bodies.rectangle(cx, PLATE_Y, 172, 16, { ...opts, chamfer: { radius: 7 } })];
   switch (lv.dish) {
-    case 'pancake': parts.push(Bodies.rectangle(cx, PLATE_Y - 24, 128, 32, { ...opts, chamfer: { radius: 7 } })); break;
-    case 'pizza':   parts.push(Bodies.rectangle(cx, PLATE_Y - 18, 148, 20, { ...opts, chamfer: { radius: 9 } })); break;
-    case 'burger':  parts.push(Bodies.rectangle(cx, PLATE_Y - 23, 126, 30, { ...opts, chamfer: { radius: 13 } })); break;
+    case 'pancake': parts.push(Bodies.rectangle(cx, PLATE_Y - 24, 142, 32, { ...opts, chamfer: { radius: 7 } })); break;
+    case 'pizza':   parts.push(Bodies.rectangle(cx, PLATE_Y - 18, 160, 20, { ...opts, chamfer: { radius: 9 } })); break;
+    case 'burger':  parts.push(Bodies.rectangle(cx, PLATE_Y - 23, 138, 30, { ...opts, chamfer: { radius: 13 } })); break;
     case 'taco':
-      parts.push(Bodies.rectangle(cx - 34, PLATE_Y - 32, 86, 13, { ...opts, angle:  0.82, chamfer: { radius: 5 } }));
-      parts.push(Bodies.rectangle(cx + 34, PLATE_Y - 32, 86, 13, { ...opts, angle: -0.82, chamfer: { radius: 5 } }));
+      parts.push(Bodies.rectangle(cx - 37, PLATE_Y - 32, 94, 13, { ...opts, angle:  0.82, chamfer: { radius: 5 } }));
+      parts.push(Bodies.rectangle(cx + 37, PLATE_Y - 32, 94, 13, { ...opts, angle: -0.82, chamfer: { radius: 5 } }));
       break;
     case 'sundae':
-      parts.push(Bodies.rectangle(cx, PLATE_Y - 16, 98, 14, { ...opts, chamfer: { radius: 6 } }));
-      parts.push(Bodies.rectangle(cx - 52, PLATE_Y - 38, 13, 56, { ...opts, angle:  0.22, chamfer: { radius: 5 } }));
-      parts.push(Bodies.rectangle(cx + 52, PLATE_Y - 38, 13, 56, { ...opts, angle: -0.22, chamfer: { radius: 5 } }));
+      parts.push(Bodies.rectangle(cx, PLATE_Y - 16, 110, 14, { ...opts, chamfer: { radius: 6 } }));
+      parts.push(Bodies.rectangle(cx - 57, PLATE_Y - 38, 13, 56, { ...opts, angle:  0.22, chamfer: { radius: 5 } }));
+      parts.push(Bodies.rectangle(cx + 57, PLATE_Y - 38, 13, 56, { ...opts, angle: -0.22, chamfer: { radius: 5 } }));
       break;
   }
   const plate = Body.create({ parts, inertia: Infinity, friction: 1.2, frictionStatic: 2 });
@@ -272,7 +272,7 @@ function startLevel(i){
         if (!bod.plugin || !bod.plugin.def) continue;
         // squishy catch: soft food absorbs most of the impact on first touch
         if (bod === G.falling && !bod.plugin.touched)
-          Body.setVelocity(bod, { x: bod.velocity.x * .45, y: bod.velocity.y * .45 });
+          Body.setVelocity(bod, { x: bod.velocity.x * .32, y: bod.velocity.y * .32 });
         bod.plugin.touched = true;
       }
     }
@@ -281,7 +281,7 @@ function startLevel(i){
   G.toppings = []; G.landedStack = []; G.falling = null;
   G.queue = []; refillQueue(lv);
   G.preview = null;
-  G.hearts = 3; G.landed = 0; G.score = 0; G.combo = 1;
+  G.misses = 0; G.landed = 0; G.score = 0; G.combo = 1;
   G.disp.t = Math.random() * 6; G.wind = { on: false, t: 0 };
   G.particles = [];
   G.munchy = { mouth: 0, blink: 0, drool: 0, happy: 0 };
@@ -318,12 +318,12 @@ function dropTopping(){
     density: def.density || .0011,
     friction: (def.friction || 1) * (lv.slippery ? .55 : 1),
     frictionStatic: 2.5,
-    frictionAir: .03,
+    frictionAir: .035,
     restitution: def.restitution || .04,
   });
   body.plugin = { def, state: 'falling', touched: false, settle: 0, seed: Math.floor(Math.random() * 99999) + 1 };
   // soft food resists spinning — fewer pieces tumbling onto their edge
-  Body.setInertia(body, body.inertia * 2.4);
+  Body.setInertia(body, body.inertia * 3.2);
   Body.setAngularVelocity(body, (Math.random() - .5) * .03);
   Composite.add(G.engine.world, body);
   G.toppings.push(body);
@@ -396,12 +396,11 @@ function munch(b){
   Snd.nom();
 
   if (G.state === 'play' || G.state === 'settling') {
-    G.hearts--;
+    G.misses++;
     G.combo = 1;
     G.shake = 320;
     Snd.miss();
     updateHUD();
-    if (G.hearts <= 0) { beginFail(); return; }
     if (G.state === 'settling') { G.state = 'play'; G.stateT = 0; }
     if (!G.falling && !G.preview) G.spawnDelay = 500;
   }
@@ -417,28 +416,22 @@ function beginWin(){
   Snd.win();
 
   const lv = LEVELS[G.levelIndex];
-  const stars = Math.max(1, G.hearts);
+  const stars = G.misses === 0 ? 3 : G.misses <= 2 ? 2 : 1;
   save.stars[lv.id] = Math.max(save.stars[lv.id] || 0, stars);
   save.best[lv.id] = Math.max(save.best[lv.id] || 0, G.score);
   persist();
 }
 
-function beginFail(){
-  G.state = 'fail'; G.stateT = 0;
-  G.munchy.mouth = 1; G.munchy.happy = 1;
-  Snd.fail();
-}
-
 function showEnd(won){
   G.state = 'end';
   const lv = LEVELS[G.levelIndex];
-  const stars = won ? Math.max(1, G.hearts) : 0;
+  const stars = won ? (G.misses === 0 ? 3 : G.misses <= 2 ? 2 : 1) : 0;
   $('end-emoji').textContent = won ? lv.emoji : '😋';
   $('end-title').textContent = won ? 'Dish complete!' : 'Munchy ate your tower!';
   $('end-stars').innerHTML = starStr(stars);
   $('end-score').textContent = `Score: ${G.score}` + (save.best[lv.id] ? `  ·  Best: ${save.best[lv.id]}` : '');
   $('end-msg').textContent = won
-    ? (stars === 3 ? 'WOW! A perfect dish — three stars!' : 'Yummy! Fewer drops for more stars!')
+    ? (stars === 3 ? 'WOW! A perfect dish — Munchy got no snacks!' : `Munchy sneaked ${G.misses} snack${G.misses === 1 ? '' : 's'} — drop fewer for more stars!`)
     : '"BURP! Delicious! Build me another one!" — Munchy';
   const next = $('btn-next');
   next.classList.toggle('hidden', !won || G.levelIndex >= LEVELS.length - 1);
@@ -492,8 +485,8 @@ function stepGame(){
     if (G.keys.ArrowLeft || G.keys.a) G.plateTargetX -= .5 * dt;
     if (G.keys.ArrowRight || G.keys.d) G.plateTargetX += .5 * dt;
   }
-  G.plateTargetX = Math.max(88, Math.min(W - 88, G.plateTargetX));
-  const vx = Math.max(-10, Math.min(10, (G.plateTargetX - G.plate.position.x) * .16));
+  G.plateTargetX = Math.max(96, Math.min(W - 96, G.plateTargetX));
+  const vx = Math.max(-9, Math.min(9, (G.plateTargetX - G.plate.position.x) * .14));
   Body.setVelocity(G.plate, { x: vx, y: 0 });
   Body.setPosition(G.plate, { x: G.plate.position.x, y: G.plateY });
   Body.setAngle(G.plate, 0);
@@ -517,7 +510,7 @@ function stepGame(){
   // --- wind gimmick ---
   if (G.wind.on && (G.state === 'play' || G.state === 'settling')) {
     G.wind.t += dt;
-    const fx = Math.sin(G.wind.t * .0011) * .00025;
+    const fx = Math.sin(G.wind.t * .0011) * .00017;
     for (const b of G.toppings) {
       Matter.Sleeping.set(b, false);
       Body.applyForce(b, b.position, { x: fx * b.mass, y: 0 });
@@ -545,8 +538,8 @@ function stepGame(){
   // --- wobble rescue slow-mo ---
   if ((G.state === 'play' || G.state === 'settling') && G.landedStack.length >= 2 && G.slowmoCd <= 0) {
     const top = G.landedStack[G.landedStack.length - 1];
-    const risk = Math.abs(top.position.x - G.plate.position.x) / 85;
-    if (risk > .8) {
+    const risk = Math.abs(top.position.x - G.plate.position.x) / 95;
+    if (risk > .72) {
       G.slowmo = 900; G.slowmoCd = 6000;
       textPop(W / 2, 250, '😱 WOBBLE! Save it!', '#ffffff', 1400, 22);
       Snd.wobble();
@@ -563,18 +556,6 @@ function stepGame(){
 
   // --- end transitions ---
   if (G.state === 'win' && G.stateT > 1900) showEnd(true);
-  if (G.state === 'fail') {
-    // munchy gobbles the tower piece by piece
-    if (G.stateT > 250 && G.toppings.length && Math.floor(G.stateT / 180) !== Math.floor((G.stateT - dt) / 180)) {
-      const b = G.toppings[G.toppings.length - 1];
-      crumbs(b.position.x, b.position.y, b.plugin.def.dark, 8);
-      Composite.remove(G.engine.world, b);
-      G.toppings.pop();
-      Snd.nom();
-    }
-    if (G.stateT > 1900) showEnd(false);
-  }
-
   // --- munchy timers ---
   const m = G.munchy;
   m.mouth = Math.max(0, m.mouth - dt / 500);
@@ -1034,23 +1015,23 @@ function drawPlate(){
 
   // shadow on "floor glow"
   ctx.fillStyle = 'rgba(50,15,60,.25)';
-  ctx.beginPath(); ctx.ellipse(0, 30, 95, 10, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0, 30, 105, 10, 0, 0, Math.PI * 2); ctx.fill();
 
   // tray
-  puffy(-78, -9, 156, 18, 9, '#ffffff', '#cfc0e8');
+  puffy(-88, -9, 176, 18, 9, '#ffffff', '#cfc0e8');
 
   // dish base
   switch (lv.dish) {
     case 'pancake':
-      for (let i = 0; i < 3; i++) puffy(-64 + i * 2, -14 - (i + 1) * 12, 128 - i * 4, 15, 8, '#f5c069', '#c98b3d');
+      for (let i = 0; i < 3; i++) puffy(-71 + i * 2, -14 - (i + 1) * 12, 142 - i * 4, 15, 8, '#f5c069', '#c98b3d');
       puffy(-18, -52, 36, 12, 5, '#ffe27a', '#f0b32c'); // butter on top
       break;
     case 'pizza':
-      puffy(-74, -28, 148, 12, 6, '#e8b25e', '#b57f33');           // crust
-      puffy(-66, -26, 132, 8, 4, '#ff6b52', '#d84a33');            // sauce
+      puffy(-80, -28, 160, 12, 6, '#e8b25e', '#b57f33');           // crust
+      puffy(-72, -26, 144, 8, 4, '#ff6b52', '#d84a33');            // sauce
       break;
     case 'burger':
-      puffy(-63, -40, 126, 32, 16, '#f2b45e', '#c9832f');          // bun
+      puffy(-69, -40, 138, 32, 16, '#f2b45e', '#c9832f');          // bun
       ctx.fillStyle = '#fff3d8';
       for (const [sx, sy] of [[-30, -30], [0, -34], [28, -29], [-14, -24], [16, -23]]) {
         ctx.beginPath(); ctx.ellipse(sx, sy, 2.6, 1.8, .4, 0, Math.PI * 2); ctx.fill();
@@ -1058,14 +1039,14 @@ function drawPlate(){
       break;
     case 'taco':
       ctx.save(); ctx.rotate(0);
-      ctx.save(); ctx.translate(-34, -32); ctx.rotate(0.82); puffy(-43, -6.5, 86, 13, 5, '#f5cb72', '#c99b42'); ctx.restore();
-      ctx.save(); ctx.translate(34, -32); ctx.rotate(-0.82); puffy(-43, -6.5, 86, 13, 5, '#f5cb72', '#c99b42'); ctx.restore();
+      ctx.save(); ctx.translate(-37, -32); ctx.rotate(0.82); puffy(-47, -6.5, 94, 13, 5, '#f5cb72', '#c99b42'); ctx.restore();
+      ctx.save(); ctx.translate(37, -32); ctx.rotate(-0.82); puffy(-47, -6.5, 94, 13, 5, '#f5cb72', '#c99b42'); ctx.restore();
       ctx.restore();
       break;
     case 'sundae':
-      puffy(-49, -23, 98, 14, 6, '#dff3ff', '#a8c9e8');
-      ctx.save(); ctx.translate(-52, -38); ctx.rotate(0.22); puffy(-6.5, -28, 13, 56, 5, '#eaf7ff', '#a8c9e8'); ctx.restore();
-      ctx.save(); ctx.translate(52, -38); ctx.rotate(-0.22); puffy(-6.5, -28, 13, 56, 5, '#eaf7ff', '#a8c9e8'); ctx.restore();
+      puffy(-55, -23, 110, 14, 6, '#dff3ff', '#a8c9e8');
+      ctx.save(); ctx.translate(-57, -38); ctx.rotate(0.22); puffy(-6.5, -28, 13, 56, 5, '#eaf7ff', '#a8c9e8'); ctx.restore();
+      ctx.save(); ctx.translate(57, -38); ctx.rotate(-0.22); puffy(-6.5, -28, 13, 56, 5, '#eaf7ff', '#a8c9e8'); ctx.restore();
       break;
   }
 
@@ -1073,7 +1054,7 @@ function drawPlate(){
   let mood = 'happy';
   if (G.landedStack.length >= 2) {
     const top = G.landedStack[G.landedStack.length - 1];
-    const risk = Math.abs(top.position.x - p.x) / 85;
+    const risk = Math.abs(top.position.x - p.x) / 95;
     mood = risk > .75 ? 'panic' : risk > .45 ? 'worried' : 'happy';
   }
   ctx.fillStyle = '#5a4470';
