@@ -72,31 +72,37 @@ const LEVELS = [
     sky:['#8ec9ff','#ffd9a8'], hill:'#ffb26b', hill2:'#ff8f5e',
     target:6,  sweep:1.0, dropEvery:3600,
     pool:['butter','cream','strawberry','jam','scoop','banana'],
+    wrong:['pepperoni','olive','patty'],
     intro:'Stack 6 yummy toppings on the pancakes!' },
   { id:'pizza', name:'Pizza Tower', emoji:'🍕', dish:'pizza',
     sky:['#ffbe76','#ff7979'], hill:'#e05656', hill2:'#c23e3e',
     target:8,  sweep:1.12, dropEvery:3100,
     pool:['cheese','ham','pepperoni','mushroom','olive','pepper'],
+    wrong:['strawberry','scoop','cherry'],
     intro:'Mamma mia! Stack 8 pizza toppings!' },
   { id:'burger', name:'Burger Mountain', emoji:'🍔', dish:'burger',
     sky:['#7ed6df','#f6e58d'], hill:'#6ab04c', hill2:'#4f8c38',
     target:9,  sweep:1.25, dropEvery:2800,
     pool:['patty','chzslice','lettuce','tomato','pickle','bacon','onion'],
+    wrong:['banana','cream','jam'],
     intro:'Watch out — pickles are bouncy! Stack 9!' },
   { id:'taco', name:'Taco Volcano', emoji:'🌮', dish:'taco',
     sky:['#f8c291','#e55039'], hill:'#b3552d', hill2:'#8e3e1f',
     target:10, sweep:1.35, dropEvery:2500, wind:true,
     pool:['meat','shreds','chili','tomcube','guac','sourcream'],
+    wrong:['whip','scoopP','cherry'],
     intro:'A windy one! Stack 10 in the crunchy shell!' },
   { id:'sundae', name:'Sundae Sky', emoji:'🍨', dish:'sundae',
     sky:['#c8a2ff','#ffc2dc'], hill:'#9b6bd6', hill2:'#7d4fbd',
     target:12, sweep:1.5, dropEvery:2200, slippery:true,
     pool:['scoopP','scoopC','scoopM','whip','cherry','wafer'],
+    wrong:['olive','pepper','ham'],
     intro:'Slippery scoops! Stack 12 to the sky!' },
   { id:'candy', name:'Candy Bowl', emoji:'🍬', dish:'bowl',
     sky:['#ff9ecf','#a7d8ff'], hill:'#e05fa8', hill2:'#b83f88',
     target:9, sweep:1.4, dropEvery:2400, sticky:true,
     pool:['winegum','kexchoklad','dumle','bubs','winegum2','bil','jelly'],
+    wrong:['olive','pepper','mushroom'],
     intro:'Fånga godiset i skålen! Vingummi, Dumle, Kexchoklad…' },
 ];
 
@@ -223,6 +229,11 @@ const G = {
   falling: null,       // the currently dropping body
   queue: [],           // upcoming topping ids
   preview: null,       // topping def waiting in the dispenser
+  previewWrong: false, // is the waiting item a "wrong" hazard?
+  raider: null,        // a hungry gummy bear falling from the cloud
+  raiderCd: 0,         // ms until another raider may appear
+  shakeMeter: 0,       // how hard the player is shaking the plate
+  platePrevVX: 0,
   misses: 0, landed: 0, score: 0, combo: 1,
   disp: { t: 0, x: W / 2 },
   autoT: 0,            // ms until the dispenser auto-drops
@@ -363,11 +374,20 @@ function startLevel(i){
     for (const pair of e.pairs) {
       const a = pair.bodyA, b = pair.bodyB;
       const floorHit = a.label === 'floor' ? b : (b.label === 'floor' ? a : null);
-      if (floorHit && floorHit.plugin && floorHit.plugin.def) { munch(floorHit); continue; }
+      if (floorHit && floorHit.plugin && (floorHit.plugin.def || floorHit.plugin.raider)) { munch(floorHit); continue; }
+
+      // a wrong item that reaches the dish/stack knocks things away hard
+      const wrongBod = (a.plugin && a.plugin.wrong && !a.plugin.bonked) ? a
+                     : (b.plugin && b.plugin.wrong && !b.plugin.bonked) ? b : null;
+      if (wrongBod) {
+        const other = wrongBod === a ? b : a;
+        if (other === G.plate || (other.plugin && other.plugin.state === 'landed')) bonkStack(wrongBod);
+      }
+
       for (const bod of [a, b]) {
         if (!bod.plugin || !bod.plugin.def) continue;
         // squishy catch: soft food absorbs most of the impact on first touch
-        if (bod === G.falling && !bod.plugin.touched)
+        if (bod === G.falling && !bod.plugin.touched && !bod.plugin.wrong)
           Body.setVelocity(bod, { x: bod.velocity.x * .32, y: bod.velocity.y * .32 });
         bod.plugin.touched = true;
       }
@@ -376,7 +396,9 @@ function startLevel(i){
 
   G.toppings = []; G.landedStack = []; G.falling = null;
   G.queue = []; refillQueue(lv);
-  G.preview = null;
+  G.preview = null; G.previewWrong = false;
+  G.raider = null; G.raiderCd = 7000 + Math.random() * 6000;
+  G.shakeMeter = 0; G.platePrevVX = 0;
   G.misses = 0; G.landed = 0; G.score = 0; G.combo = 1;
   G.disp.t = Math.random() * 6; G.wind = { on: false, t: 0 };
   G.particles = [];
@@ -413,31 +435,42 @@ function destroyLevel(){
 // ============================================================
 function nextPreview(){
   const lv = LEVELS[G.levelIndex];
-  if (!G.queue.length) refillQueue(lv);
-  G.preview = T[G.queue.shift()];
+  // every so often the cloud grabs the wrong thing — steer away from it!
+  if (lv.wrong && G.landed >= 2 && G.landed < lv.target - 1 && Math.random() < .22) {
+    G.preview = T[lv.wrong[Math.floor(Math.random() * lv.wrong.length)]];
+    G.previewWrong = true;
+  } else {
+    if (!G.queue.length) refillQueue(lv);
+    G.preview = T[G.queue.shift()];
+    G.previewWrong = false;
+  }
   G.autoT = lv.dropEvery;   // countdown until the cloud lets go by itself
 }
 
 function dropTopping(){
   if (G.state !== 'play' || !G.preview || G.falling) return;
   const def = G.preview;
+  const wrong = G.previewWrong;
   const lv = LEVELS[G.levelIndex];
   const body = Bodies.rectangle(G.disp.x, DISPENSER_Y + 34, def.w, def.h, {
     chamfer: { radius: Math.min(def.corner, Math.min(def.w, def.h) / 2 - 1) },
-    density: def.density || .0011,
-    friction: (def.friction || 1) * (def.h <= 22 ? 1.5 : 1) * (lv.slippery ? .6 : 1) * (lv.sticky ? 1.5 : 1),
-    frictionStatic: (def.h <= 22 ? 4.5 : 3) * (lv.sticky ? 1.4 : 1),
+    density: (def.density || .0011) * (wrong ? 1.7 : 1),
+    // flat pieces (short height) grip much harder so they sit still and
+    // don't slide off the dish — this covers butter/meat (h24) too
+    friction: (def.friction || 1) * (def.h <= 26 ? 2.1 : 1.15) * (lv.slippery ? .65 : 1) * (lv.sticky ? 1.5 : 1),
+    frictionStatic: (def.h <= 26 ? 6 : 3.4) * (lv.sticky ? 1.4 : 1),
     frictionAir: lv.sticky ? .07 : .035,   // sticky candy stops rolling fast
-    restitution: lv.sticky ? 0 : (def.restitution || .04),
+    restitution: wrong ? .55 : (lv.sticky ? 0 : (def.restitution || .04)),
   });
-  body.plugin = { def, state: 'falling', touched: false, settle: 0, seed: Math.floor(Math.random() * 99999) + 1 };
+  body.plugin = { def, state: 'falling', touched: false, settle: 0, wrong, bonked: false, seed: Math.floor(Math.random() * 99999) + 1 };
   // soft food resists spinning — fewer pieces tumbling onto their edge
-  Body.setInertia(body, body.inertia * (lv.sticky ? 4.5 : 3.2));
+  Body.setInertia(body, body.inertia * (wrong ? 1.4 : (lv.sticky ? 4.5 : 3.2)));
   Body.setAngularVelocity(body, (Math.random() - .5) * .03);
   Composite.add(G.engine.world, body);
   G.toppings.push(body);
   G.falling = body;
   G.preview = null;
+  G.previewWrong = false;
   Snd.drop();
 }
 
@@ -492,7 +525,11 @@ function munch(b){
   Composite.remove(G.engine.world, b);
   G.toppings = G.toppings.filter(t => t !== b);
 
-  if (b.plugin.state === 'landed') {
+  // a raider bear falling to the floor is just a scampering bear, no fuss
+  if (b.plugin.raider) { if (G.raider && G.raider.body === b) G.raider = null; return; }
+
+  const wasLanded = b.plugin.state === 'landed';
+  if (wasLanded) {
     G.landedStack = G.landedStack.filter(t => t !== b);
     G.landed = Math.max(0, G.landed - 1);
   }
@@ -503,6 +540,9 @@ function munch(b){
   sendBearTo(fx);
   Snd.nom();
 
+  // a wrong item falling away is a GOOD dodge — never a miss
+  if (b.plugin.wrong && !wasLanded) return;
+
   if (G.state === 'play' || G.state === 'settling') {
     G.misses++;
     G.combo = 1;
@@ -512,6 +552,28 @@ function munch(b){
     if (G.state === 'settling') { G.state = 'play'; G.stateT = 0; }
     if (!G.falling && !G.preview) G.spawnDelay = 500;
   }
+}
+
+// a wrong item slams into the stack: shove the nearby pieces away hard
+function bonkStack(w){
+  w.plugin.bonked = true;
+  G.shake = 420;
+  textPop(w.position.x, w.position.y - 30, 'BONK!', '#ff5b6b', 1000, 24);
+  Snd.miss();
+  for (const t of G.toppings) {
+    if (t === w || !t.plugin.def) continue;
+    const dx = t.position.x - w.position.x, dy = t.position.y - w.position.y;
+    const d = Math.hypot(dx, dy) || 1;
+    if (d > 120) continue;
+    Matter.Sleeping.set(t, false);
+    const k = .06 * (1 - d / 120);
+    Body.applyForce(t, t.position, { x: (dx / d) * k * t.mass, y: (dy / d) * k * t.mass - .01 * t.mass });
+    Body.setAngularVelocity(t, (Math.random() - .5) * .3);
+  }
+  // the wrong item bounces off and gets cleared shortly after
+  Body.setVelocity(w, { x: w.velocity.x * .4, y: -6 });
+  if (G.falling === w) { G.falling = null; if (!G.preview) G.spawnDelay = 500; }
+  w.plugin.removeAt = G.time + 1400;
 }
 
 // ============================================================
@@ -602,6 +664,12 @@ function stepGame(){
   Body.setAngle(G.plate, 0);
   Body.setAngularVelocity(G.plate, 0);
 
+  // how vigorously is the plate being shaken? (used to fling off a raider)
+  if (Math.sign(vx) !== Math.sign(G.platePrevVX) && Math.abs(vx) > 4)
+    G.shakeMeter += 1;                       // a firm direction reversal
+  G.shakeMeter = Math.max(0, G.shakeMeter - dt * .004);
+  G.platePrevVX = vx;
+
   // --- dispenser sweep ---
   if (G.state === 'play') {
     const wander = .6 + .55 * Math.sin(G.disp.t * .43 + 1.7) * Math.sin(G.disp.t * .19);
@@ -617,6 +685,9 @@ function stepGame(){
       G.autoT -= dt;
       if (G.autoT <= 0) dropTopping();
     }
+    // once in a while a hungry gummy bear tumbles out of the cloud
+    G.raiderCd -= dt;
+    if (G.raiderCd <= 0 && !G.raider && G.landed >= 2) spawnRaider();
   }
 
   // --- wind gimmick ---
@@ -641,7 +712,7 @@ function stepGame(){
 
   // --- landing check ---
   const f = G.falling;
-  if (f && f.plugin.touched) {
+  if (f && f.plugin.touched && !f.plugin.wrong) {
     const sp = Math.hypot(f.velocity.x, f.velocity.y);
     f.plugin.settle = sp < 1.6 ? f.plugin.settle + 1 : 0;
     f.plugin.touchMs = (f.plugin.touchMs || 0) + dt;
@@ -649,7 +720,18 @@ function stepGame(){
     // contact a while and is at least slow-ish — stops a jostling candy in
     // the bowl from permanently blocking the next drop
     if (f.plugin.settle >= 16 || (f.plugin.touchMs > 1500 && sp < 3.2)) confirmLand(f);
+  } else if (f && f.plugin.wrong && f.plugin.touched) {
+    // a wrong item that somehow settled without bonking: release the turn
+    f.plugin.touchMs = (f.plugin.touchMs || 0) + dt;
+    if (f.plugin.touchMs > 700) { G.falling = null; if (!G.preview) G.spawnDelay = 500; }
   }
+
+  // clear spent wrong items
+  for (const b of G.toppings.slice())
+    if (b.plugin.removeAt && G.time > b.plugin.removeAt) munch(b);
+
+  // --- hungry raider bear from the cloud ---
+  updateRaider(dt);
 
   // --- wobble rescue: a real, rewardable save ---
   // Only fires when the top of the tower is genuinely toppling (drifted far
@@ -660,11 +742,11 @@ function stepGame(){
       && G.rescue <= 0 && G.slowmoCd <= 0) {
     const top = G.landedStack[G.landedStack.length - 1];
     const lean = top.position.x - G.plate.position.x;
-    const toppling = Math.abs(lean) > 60
+    const toppling = Math.abs(lean) > 46
       && Math.sign(top.velocity.x || 0) === Math.sign(lean)
-      && Math.abs(top.velocity.x) > .35;
+      && Math.abs(top.velocity.x) > .25;
     if (toppling) {
-      G.rescue = 1300; G.slowmo = 1300; G.slowmoCd = 5000;
+      G.rescue = 2100; G.slowmo = 2100; G.slowmoCd = 3800;
       G.rescueSide = Math.sign(lean); G.rescueSaved = false;
       textPop(W / 2, 250, '⚡ Quick! Steer under it!', '#ffffff', 1500, 20);
       Snd.wobble();
@@ -682,14 +764,14 @@ function stepGame(){
         for (let i = 1; i < G.landedStack.length; i++) {
           const b = G.landedStack[i];
           Matter.Sleeping.set(b, false);
-          Body.applyForce(b, b.position, { x: -G.rescueSide * .0006 * b.mass, y: 0 });
+          Body.applyForce(b, b.position, { x: -G.rescueSide * .0008 * b.mass, y: 0 });
           // bleed off the outward topple so a firm steer visibly recovers it
           if (Math.sign(b.velocity.x) === G.rescueSide)
-            Body.setVelocity(b, { x: b.velocity.x * .85, y: b.velocity.y });
+            Body.setVelocity(b, { x: b.velocity.x * .82, y: b.velocity.y });
         }
       }
       // SAVED once the tower comes back over the base
-      if (!G.rescueSaved && Math.abs(lean) < 42) {
+      if (!G.rescueSaved && Math.abs(lean) < 54) {
         G.rescueSaved = true;
         G.rescue = Math.min(G.rescue, 260);
         G.score += 200; G.combo = Math.min(G.combo + 1, 9);
@@ -1461,6 +1543,114 @@ function drawBears(){
   for (const b of G.bears) drawBear(b);
 }
 
+// ---------- Raider: a big hungry gummy bear that falls from the cloud ----------
+const RAIDER = ['#c86bff', '#7a2fc9'];
+
+function spawnRaider(){
+  const x = 110 + Math.random() * (W - 220);
+  const body = Bodies.circle(x, DISPENSER_Y + 40, 24, {
+    density: .0016, friction: 1.1, frictionStatic: 2, restitution: .12, frictionAir: .02,
+  });
+  body.plugin = { raider: true };
+  Composite.add(G.engine.world, body);
+  G.raider = { body, state: 'falling', eatT: 0, life: 0, blink: 0 };
+  G.raiderCd = 15000 + Math.random() * 10000;
+  G.shakeMeter = 0;
+  textPop(W / 2, 205, '🐻 Hungry bear! Shake it off!', '#ffd23a', 2400, 20);
+  Snd.wobble();
+}
+
+function updateRaider(dt){
+  const r = G.raider;
+  if (!r || !G.engine) return;
+  const b = r.body;
+  r.life += dt; r.blink -= dt; if (r.blink < -140) r.blink = 1800 + Math.random() * 2200;
+
+  if (b.position.y > H + 60) { munch(b); return; }   // fell past the floor → gone
+
+  const speed = Math.hypot(b.velocity.x, b.velocity.y);
+
+  if (r.state === 'falling') {
+    if (speed < 2.4 && Math.abs(b.position.x - G.plate.position.x) < 92 && b.position.y > 380) {
+      r.state = 'onplate'; r.eatT = 950; G.shakeMeter = 0;
+    }
+  } else if (r.state === 'onplate') {
+    if (Math.abs(b.position.x - G.plate.position.x) > 100) { r.state = 'falling'; return; }
+    Matter.Sleeping.set(b, false);
+    // it eventually waddles off on its own so it can never sit forever
+    r.onPlateMs = (r.onPlateMs || 0) + dt;
+    if (r.onPlateMs > 9000) {
+      r.state = 'flung';
+      Body.setVelocity(b, { x: (b.position.x < W / 2 ? -1 : 1) * 6, y: -8 });
+      textPop(b.position.x, b.position.y - 40, 'Burp! 🐻', '#ffd23a', 1200, 20);
+      return;
+    }
+    // SHAKE the plate hard to fling the bear off before it eats everything
+    if (G.shakeMeter >= 4) {
+      r.state = 'flung';
+      Body.setVelocity(b, { x: (b.position.x < W / 2 ? -1 : 1) * 9, y: -11.5 });
+      Body.setAngularVelocity(b, (Math.random() - .5) * .6);
+      textPop(b.position.x, b.position.y - 42, 'WHEE! 🐻', '#7ee06e', 1300, 22);
+      G.shakeMeter = 0;
+      return;
+    }
+    // otherwise it gobbles a topping off the top every so often
+    r.eatT -= dt;
+    if (r.eatT <= 0) {
+      r.eatT = 800;
+      if (G.landedStack.length) {
+        munch(G.landedStack[G.landedStack.length - 1]);   // counts as a miss
+        textPop(b.position.x, b.position.y - 28, 'NOM!', '#ff5b6b', 700, 20);
+      }
+    }
+  } else if (r.state === 'flung') {
+    if (b.position.y > H + 60 || b.position.x < -40 || b.position.x > W + 40 || r.life > 7000) { munch(b); return; }
+  }
+}
+
+function drawRaider(){
+  const r = G.raider;
+  if (!r || !r.body) return;
+  const b = r.body;
+  const eating = r.state === 'onplate';
+  ctx.save();
+  ctx.translate(b.position.x, b.position.y);
+  ctx.rotate(b.angle * .5);
+  const S = 1.9;
+  // shadow
+  ctx.fillStyle = 'rgba(50,15,60,.18)';
+  ctx.beginPath(); ctx.ellipse(0, 22 * S, 16 * S, 4, 0, 0, TAU); ctx.fill();
+  const jelly = (cx, cy, rx, ry) => {
+    const g = ctx.createRadialGradient(cx - rx * .35, cy - ry * .4, rx * .15, cx, cy, Math.max(rx, ry) * 1.3);
+    g.addColorStop(0, shade(RAIDER[0], 1.25)); g.addColorStop(.6, RAIDER[0]); g.addColorStop(1, RAIDER[1]);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, TAU); ctx.fill();
+  };
+  const wig = Math.sin(G.time * .02) * 3;
+  jelly(-7 * S, 15 * S + wig, 6 * S, 6 * S);
+  jelly(7 * S, 15 * S - wig, 6 * S, 6 * S);
+  jelly(-13 * S, 2 * S, 5 * S, 6 * S);
+  jelly(13 * S, 2 * S, 5 * S, 6 * S);
+  jelly(0, 5 * S, 13 * S, 13 * S);
+  jelly(-9 * S, -15 * S, 5 * S, 5 * S);
+  jelly(9 * S, -15 * S, 5 * S, 5 * S);
+  jelly(0, -8 * S, 11 * S, 10 * S);
+  ctx.fillStyle = '#3a2033';
+  const blink = r.blink < 0;
+  if (eating) {
+    // big chomping mouth
+    ctx.beginPath(); ctx.ellipse(0, -2 * S, 6 * S, (4 + Math.abs(Math.sin(G.time * .03)) * 3) * S, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ff7da0'; ctx.beginPath(); ctx.ellipse(0, 0, 3 * S, 2 * S, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#3a2033';
+    ctx.beginPath(); ctx.arc(-5 * S, -12 * S, 1.8 * S, 0, TAU); ctx.arc(5 * S, -12 * S, 1.8 * S, 0, TAU); ctx.fill();
+  } else {
+    ctx.beginPath();
+    ctx.ellipse(-4 * S, -11 * S, 1.6 * S, blink ? .4 * S : 1.8 * S, 0, 0, TAU);
+    ctx.ellipse(4 * S, -11 * S, 1.6 * S, blink ? .4 * S : 1.8 * S, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, -7 * S, 1.6 * S, 0, TAU); ctx.fill();
+  }
+  ctx.restore();
+}
+
 // ---------- dispenser cloud ----------
 function drawDispenser(){
   if (G.state !== 'play' && G.state !== 'settling') return;
@@ -1490,6 +1680,12 @@ function drawDispenser(){
     ctx.translate(Math.sin(sway) * 30, 26 + def.h / 2);
     ctx.rotate(sway);
     drawFood(def);
+    if (G.previewWrong) {   // red warning ring so kids know to dodge it
+      const rad = Math.max(def.w, def.h) * .62;
+      ctx.strokeStyle = '#ff2d2d'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(0, 0, rad, 0, TAU); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-rad * .7, -rad * .7); ctx.lineTo(rad * .7, rad * .7); ctx.stroke();
+    }
     ctx.restore();
 
     // countdown bar above the cloud — the topping drops when it empties
@@ -1499,14 +1695,15 @@ function drawDispenser(){
     ctx.fillStyle = urgent ? '#ff6e6e' : '#ffffff';
     rr(bx, by, Math.max(9, bw * frac), 9, 4.5); ctx.fill();
 
-    // topping name under the preview
+    // topping name under the preview (red "Yuck!" for a wrong item)
     ctx.font = '800 14px "Baloo 2","Comic Sans MS",ui-rounded,sans-serif';
     ctx.textAlign = 'center';
     ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(90,30,90,.55)';
     const ly = y + 62 + def.h;
-    ctx.strokeText(def.label, x, ly);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(def.label, x, ly);
+    const label = G.previewWrong ? `❌ ${def.label}?` : def.label;
+    ctx.strokeText(label, x, ly);
+    ctx.fillStyle = G.previewWrong ? '#ff5b5b' : '#ffffff';
+    ctx.fillText(label, x, ly);
   }
 }
 
@@ -1623,10 +1820,26 @@ function render(){
   if (G.engine) {
     drawPlate();
     for (const b of G.toppings) drawTopping(b);
+    drawRaider();
     drawDispenser();
     drawBears();
   }
   drawParticles();
+
+  // "SHAKE!" prompt while a raider is sitting on the plate
+  if (G.raider && G.raider.state === 'onplate') {
+    const pulse = .6 + .4 * Math.abs(Math.sin(G.time * .012));
+    ctx.font = '900 26px "Baloo 2","Comic Sans MS",ui-rounded,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(90,30,90,.6)';
+    ctx.strokeText('↔ SHAKE IT OFF! ↔', W / 2, 300);
+    ctx.fillStyle = `rgba(255,${Math.round(120 + 100 * pulse)},60,1)`;
+    ctx.fillText('↔ SHAKE IT OFF! ↔', W / 2, 300);
+    // shake progress
+    const bw = 180, bx = W / 2 - bw / 2, by = 316;
+    ctx.fillStyle = 'rgba(90,60,120,.35)'; rr(bx, by, bw, 12, 6); ctx.fill();
+    ctx.fillStyle = '#7ee06e'; rr(bx, by, Math.min(bw, bw * G.shakeMeter / 4), 12, 6); ctx.fill();
+  }
 
   // slow-mo vignette
   if (G.slowmo > 0) {
