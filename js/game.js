@@ -230,6 +230,7 @@ const G = {
   particles: [],
   bears: [],           // mini gummy bears running along the bottom
   slowmo: 0, slowmoCd: 0,
+  rescue: 0, rescueSide: 0, rescueSaved: false,
   shake: 0,
   stateT: 0,           // ms in current state
   spawnDelay: 0,
@@ -380,7 +381,7 @@ function startLevel(i){
   G.disp.t = Math.random() * 6; G.wind = { on: false, t: 0 };
   G.particles = [];
   G.bears = spawnBears();
-  G.slowmo = 0; G.slowmoCd = 0; G.shake = 0;
+  G.slowmo = 0; G.slowmoCd = 0; G.rescue = 0; G.rescueSaved = false; G.shake = 0;
   G.spawnDelay = 400;
   G.state = 'play'; G.stateT = 0;
 
@@ -650,15 +651,55 @@ function stepGame(){
     if (f.plugin.settle >= 16 || (f.plugin.touchMs > 1500 && sp < 3.2)) confirmLand(f);
   }
 
-  // --- wobble rescue slow-mo ---
-  if ((G.state === 'play' || G.state === 'settling') && G.landedStack.length >= 2 && G.slowmoCd <= 0) {
+  // --- wobble rescue: a real, rewardable save ---
+  // Only fires when the top of the tower is genuinely toppling (drifted far
+  // AND actively sliding further out), never on a stack that's just resting
+  // a little off-centre. Steering the plate under the lean pulls the tower
+  // back upright; recover it in time for a bonus.
+  if ((G.state === 'play' || G.state === 'settling') && G.landedStack.length >= 3
+      && G.rescue <= 0 && G.slowmoCd <= 0) {
     const top = G.landedStack[G.landedStack.length - 1];
-    const risk = Math.abs(top.position.x - G.plate.position.x) / 95;
-    if (risk > .72) {
-      G.slowmo = 900; G.slowmoCd = 6000;
-      textPop(W / 2, 250, '😱 WOBBLE! Save it!', '#ffffff', 1400, 22);
+    const lean = top.position.x - G.plate.position.x;
+    const toppling = Math.abs(lean) > 60
+      && Math.sign(top.velocity.x || 0) === Math.sign(lean)
+      && Math.abs(top.velocity.x) > .35;
+    if (toppling) {
+      G.rescue = 1300; G.slowmo = 1300; G.slowmoCd = 5000;
+      G.rescueSide = Math.sign(lean); G.rescueSaved = false;
+      textPop(W / 2, 250, '⚡ Quick! Steer under it!', '#ffffff', 1500, 20);
       Snd.wobble();
     }
+  }
+  if (G.rescue > 0 && (G.state === 'play' || G.state === 'settling')) {
+    G.rescue -= dt;
+    const top = G.landedStack[G.landedStack.length - 1];
+    if (top) {
+      const lean = top.position.x - G.plate.position.x;
+      // ASSIST: while the player steers the plate toward the lean, pull the
+      // upper pieces back over the base so the drag has real, visible effect
+      const steerToward = Math.sign(G.plateTargetX - G.plate.position.x) === G.rescueSide;
+      if (steerToward && !G.rescueSaved) {
+        for (let i = 1; i < G.landedStack.length; i++) {
+          const b = G.landedStack[i];
+          Matter.Sleeping.set(b, false);
+          Body.applyForce(b, b.position, { x: -G.rescueSide * .0006 * b.mass, y: 0 });
+          // bleed off the outward topple so a firm steer visibly recovers it
+          if (Math.sign(b.velocity.x) === G.rescueSide)
+            Body.setVelocity(b, { x: b.velocity.x * .85, y: b.velocity.y });
+        }
+      }
+      // SAVED once the tower comes back over the base
+      if (!G.rescueSaved && Math.abs(lean) < 42) {
+        G.rescueSaved = true;
+        G.rescue = Math.min(G.rescue, 260);
+        G.score += 200; G.combo = Math.min(G.combo + 1, 9);
+        textPop(top.position.x, top.position.y - 42, 'SAVED! +200', '#7ee06e', 1300, 22);
+        sparkle(top.position.x, top.position.y, 16);
+        for (const b of G.landedStack) Body.setAngularVelocity(b, b.angularVelocity * .3);
+        Snd.perfect(5); updateHUD();
+      }
+    }
+    if (G.rescue <= 0) G.slowmo = Math.min(G.slowmo, 0);
   }
 
   // --- safety net: remove anything far off screen ---
