@@ -54,6 +54,14 @@ const T = {
   whip:       { label:'Whipped swirl',w:60, h:30, corner:13, art:'swirl',                 base:'#ffffff', dark:'#ddd2f0', density:.0008, friction:.95 },
   cherry:     { label:'Cherry',      w:30, h:24, corner:9,  art:'cherry',                 base:'#ff4d6d', dark:'#a8102e', density:.0011, friction:.85 },
   wafer:      { label:'Wafer',       w:78, h:12, corner:5,  art:'cyl', deco:'waffle',     base:'#f2c98a', dark:'#c28c4a', density:.0009, friction:1.0 },
+  // --- candy bowl (kända godissorter) ---
+  winegum:    { label:'Vingummi',    w:46, h:26, corner:12, art:'gummy',                  base:'#ff5b6b', dark:'#c62740', density:.0013, friction:1.1 },
+  winegum2:   { label:'Vingummi',    w:46, h:26, corner:12, art:'gummy',                  base:'#5bd08a', dark:'#2a9455', density:.0013, friction:1.1 },
+  kexchoklad: { label:'Kexchoklad',  w:78, h:20, corner:5,  art:'kex',                    base:'#8a5a34', dark:'#4f3018', density:.0016, friction:1.35 },
+  dumle:      { label:'Dumle',       w:38, h:36, corner:16, art:'dumle',                  base:'#7a4a26', dark:'#4a2c14', density:.0015, friction:1.0 },
+  bubs:       { label:'Bubs',        w:44, h:28, corner:13, art:'bubs',                   base:'#ff9dc4', dark:'#3a2a2a', density:.0013, friction:1.05 },
+  bil:        { label:'Bil',         w:52, h:26, corner:8,  art:'car',                    base:'#ffd23a', dark:'#e07a1c', density:.0012, friction:1.2 },
+  jelly:      { label:'Geléhjärta',  w:40, h:34, corner:14, art:'jellyheart',             base:'#ff4d8d', dark:'#c21f5f', density:.0013, friction:1.0 },
 };
 
 // ============================================================
@@ -85,6 +93,11 @@ const LEVELS = [
     target:12, sweep:1.5, dropEvery:2200, slippery:true,
     pool:['scoopP','scoopC','scoopM','whip','cherry','wafer'],
     intro:'Slippery scoops! Stack 12 to the sky!' },
+  { id:'candy', name:'Candy Bowl', emoji:'🍬', dish:'bowl',
+    sky:['#ff9ecf','#a7d8ff'], hill:'#e05fa8', hill2:'#b83f88',
+    target:9, sweep:1.4, dropEvery:2400, sticky:true,
+    pool:['winegum','kexchoklad','dumle','bubs','winegum2','bil','jelly'],
+    intro:'Fånga godiset i skålen! Vingummi, Dumle, Kexchoklad…' },
 ];
 
 // ============================================================
@@ -215,7 +228,7 @@ const G = {
   autoT: 0,            // ms until the dispenser auto-drops
   wind: { on: false, t: 0 },
   particles: [],
-  munchy: { mouth: 0, blink: 0, drool: 0, happy: 0 },
+  bears: [],           // mini gummy bears running along the bottom
   slowmo: 0, slowmoCd: 0,
   shake: 0,
   stateT: 0,           // ms in current state
@@ -291,7 +304,7 @@ function buildLevelList(){
 // ============================================================
 function makePlate(lv){
   const cx = W / 2;
-  const opts = { friction: 1.2, frictionStatic: 2, restitution: 0, density: .05 };
+  const opts = { friction: 1.6, frictionStatic: 3, restitution: 0, density: .05 };
   const parts = [Bodies.rectangle(cx, PLATE_Y, 172, 16, { ...opts, chamfer: { radius: 7 } })];
   switch (lv.dish) {
     case 'pancake': parts.push(Bodies.rectangle(cx, PLATE_Y - 24, 142, 32, { ...opts, chamfer: { radius: 7 } })); break;
@@ -306,8 +319,16 @@ function makePlate(lv){
       parts.push(Bodies.rectangle(cx - 57, PLATE_Y - 38, 13, 56, { ...opts, angle:  0.22, chamfer: { radius: 5 } }));
       parts.push(Bodies.rectangle(cx + 57, PLATE_Y - 38, 13, 56, { ...opts, angle: -0.22, chamfer: { radius: 5 } }));
       break;
+    case 'bowl':
+      // rounded candy bowl: wide flat base + two tall upright walls that
+      // cradle the sweets so they don't roll straight back out
+      parts.push(Bodies.rectangle(cx, PLATE_Y - 12, 128, 16, { ...opts, chamfer: { radius: 8 } }));
+      parts.push(Bodies.rectangle(cx - 68, PLATE_Y - 42, 15, 68, { ...opts, angle:  0.26, chamfer: { radius: 6 } }));
+      parts.push(Bodies.rectangle(cx + 68, PLATE_Y - 42, 15, 68, { ...opts, angle: -0.26, chamfer: { radius: 6 } }));
+      break;
   }
-  const plate = Body.create({ parts, inertia: Infinity, friction: 1.2, frictionStatic: 2 });
+  const plate = Body.create({ parts, inertia: Infinity, friction: 1.6, frictionStatic: 3 });
+  plate.sleepThreshold = Infinity;   // the player's plate must never doze off
   Body.setPosition(plate, { x: cx, y: plate.position.y });
   return plate;
 }
@@ -358,7 +379,7 @@ function startLevel(i){
   G.misses = 0; G.landed = 0; G.score = 0; G.combo = 1;
   G.disp.t = Math.random() * 6; G.wind = { on: false, t: 0 };
   G.particles = [];
-  G.munchy = { mouth: 0, blink: 0, drool: 0, happy: 0 };
+  G.bears = spawnBears();
   G.slowmo = 0; G.slowmoCd = 0; G.shake = 0;
   G.spawnDelay = 400;
   G.state = 'play'; G.stateT = 0;
@@ -403,14 +424,14 @@ function dropTopping(){
   const body = Bodies.rectangle(G.disp.x, DISPENSER_Y + 34, def.w, def.h, {
     chamfer: { radius: Math.min(def.corner, Math.min(def.w, def.h) / 2 - 1) },
     density: def.density || .0011,
-    friction: (def.friction || 1) * (lv.slippery ? .55 : 1),
-    frictionStatic: 2.5,
-    frictionAir: .035,
-    restitution: def.restitution || .04,
+    friction: (def.friction || 1) * (def.h <= 22 ? 1.5 : 1) * (lv.slippery ? .6 : 1) * (lv.sticky ? 1.5 : 1),
+    frictionStatic: (def.h <= 22 ? 4.5 : 3) * (lv.sticky ? 1.4 : 1),
+    frictionAir: lv.sticky ? .07 : .035,   // sticky candy stops rolling fast
+    restitution: lv.sticky ? 0 : (def.restitution || .04),
   });
   body.plugin = { def, state: 'falling', touched: false, settle: 0, seed: Math.floor(Math.random() * 99999) + 1 };
   // soft food resists spinning — fewer pieces tumbling onto their edge
-  Body.setInertia(body, body.inertia * 3.2);
+  Body.setInertia(body, body.inertia * (lv.sticky ? 4.5 : 3.2));
   Body.setAngularVelocity(body, (Math.random() - .5) * .03);
   Composite.add(G.engine.world, body);
   G.toppings.push(body);
@@ -448,7 +469,6 @@ function confirmLand(b){
     Snd.land();
   }
   G.score += 100 * (perfect ? G.combo : 1);
-  G.munchy.drool = 1;
   updateHUD();
 
   if (!lv.wind || G.landed < 4) { /* wind starts later */ }
@@ -477,9 +497,9 @@ function munch(b){
   }
   if (G.falling === b) G.falling = null;
 
-  crumbs(b.position.x, Math.min(b.position.y, H - 30), b.plugin.def.dark, 10);
-  textPop(Math.max(60, Math.min(W - 60, b.position.x)), H - 120, 'NOM!', '#ff8fb0', 900, 22);
-  G.munchy.mouth = 1; G.munchy.happy = 1;
+  const fx = Math.max(30, Math.min(W - 30, b.position.x));
+  crumbs(fx, Math.min(b.position.y, H - 30), b.plugin.def.dark, 10);
+  sendBearTo(fx);
   Snd.nom();
 
   if (G.state === 'play' || G.state === 'settling') {
@@ -498,7 +518,7 @@ function munch(b){
 // ============================================================
 function beginWin(){
   G.state = 'win'; G.stateT = 0;
-  G.munchy.happy = 1;
+  for (const bear of G.bears) bear.cheer = 1;
   for (let i = 0; i < 90; i++) confettiP();
   Snd.win();
 
@@ -514,12 +534,12 @@ function showEnd(won){
   const lv = LEVELS[G.levelIndex];
   const stars = won ? (G.misses === 0 ? 3 : G.misses <= 2 ? 2 : 1) : 0;
   $('end-emoji').textContent = won ? lv.emoji : '😋';
-  $('end-title').textContent = won ? 'Dish complete!' : 'Munchy ate your tower!';
+  $('end-title').textContent = won ? 'Dish complete!' : 'The gummy bears feasted!';
   $('end-stars').innerHTML = starStr(stars);
   $('end-score').textContent = `Score: ${G.score}` + (save.best[lv.id] ? `  ·  Best: ${save.best[lv.id]}` : '');
   $('end-msg').textContent = won
-    ? (stars === 3 ? 'WOW! A perfect dish — Munchy got no snacks!' : `Munchy sneaked ${G.misses} snack${G.misses === 1 ? '' : 's'} — drop fewer for more stars!`)
-    : '"BURP! Delicious! Build me another one!" — Munchy';
+    ? (stars === 3 ? 'WOW! A perfect dish — the gummy bears got nothing!' : `The gummy bears grabbed ${G.misses} snack${G.misses === 1 ? '' : 's'} — drop fewer for more stars!`)
+    : '"Yum yum yum!" — the gummy bears';
   const next = $('btn-next');
   next.classList.toggle('hidden', !won || G.levelIndex >= LEVELS.length - 1);
   showScreen('end');
@@ -583,8 +603,10 @@ function stepGame(){
 
   // --- dispenser sweep ---
   if (G.state === 'play') {
-    G.disp.t += dt * .0011 * lv.sweep;
-    G.disp.x = W / 2 + Math.sin(G.disp.t) * (W / 2 - 78);
+    const wander = .6 + .55 * Math.sin(G.disp.t * .43 + 1.7) * Math.sin(G.disp.t * .19);
+    G.disp.t += dt * .0011 * lv.sweep * (.55 + Math.abs(wander));
+    const amp = (W / 2 - 78) * (.55 + .45 * Math.sin(G.disp.t * .31 + .8));
+    G.disp.x = W / 2 + Math.sin(G.disp.t) * amp;
     if (G.spawnDelay > 0) {
       G.spawnDelay -= dt;
       if (G.spawnDelay <= 0 && !G.preview && !G.falling) nextPreview();
@@ -621,7 +643,11 @@ function stepGame(){
   if (f && f.plugin.touched) {
     const sp = Math.hypot(f.velocity.x, f.velocity.y);
     f.plugin.settle = sp < 1.6 ? f.plugin.settle + 1 : 0;
-    if (f.plugin.settle >= 16) confirmLand(f);
+    f.plugin.touchMs = (f.plugin.touchMs || 0) + dt;
+    // confirm on a clean settle, OR as a fallback once a piece has been in
+    // contact a while and is at least slow-ish — stops a jostling candy in
+    // the bowl from permanently blocking the next drop
+    if (f.plugin.settle >= 16 || (f.plugin.touchMs > 1500 && sp < 3.2)) confirmLand(f);
   }
 
   // --- wobble rescue slow-mo ---
@@ -645,14 +671,8 @@ function stepGame(){
 
   // --- end transitions ---
   if (G.state === 'win' && G.stateT > 1900) showEnd(true);
-  // --- munchy timers ---
-  const m = G.munchy;
-  m.mouth = Math.max(0, m.mouth - dt / 500);
-  m.happy = Math.max(0, m.happy - dt / 1400);
-  m.drool = Math.max(0, m.drool - dt / 2200);
-  m.blink -= dt;
-  if (m.blink < -150) m.blink = 2200 + Math.random() * 2400;
 
+  updateBears(dt);
   if (G.shake > 0) G.shake -= dt;
 
   updateParticles(dt);
@@ -1075,6 +1095,97 @@ const ART = {
     ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(-w * .36, h * .16); ctx.quadraticCurveTo(0, -h * .6, w * .36, h * .16); ctx.stroke();
   },
+
+  // ---- candy ----
+  gummy(def){       // vingummi — bright translucent jelly
+    const { w, h, base, dark } = def;
+    const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+    g.addColorStop(0, shade(base, 1.3));
+    g.addColorStop(1, dark);
+    ctx.fillStyle = g;
+    rr(-w / 2, -h / 2, w, h, def.corner); ctx.fill();
+    ctx.strokeStyle = shade(dark, .9); ctx.lineWidth = 1.8; ctx.stroke();
+    // sugar-dusted matte edge
+    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 3;
+    rr(-w / 2 + 3, -h / 2 + 3, w - 6, h - 6, def.corner - 3); ctx.stroke();
+    sheen(-w * .18, -h * .2, w * .22, h * .16, .6);
+  },
+
+  kex(def){         // Kexchoklad — ridged chocolate wafer bar
+    const { w, h, base, dark } = def;
+    const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+    g.addColorStop(0, shade(base, 1.15));
+    g.addColorStop(1, dark);
+    ctx.fillStyle = g;
+    rr(-w / 2, -h / 2, w, h, def.corner); ctx.fill();
+    ctx.strokeStyle = shade(dark, .8); ctx.lineWidth = 2; ctx.stroke();
+    // vertical ridges
+    ctx.strokeStyle = 'rgba(60,30,15,.4)'; ctx.lineWidth = 1.6;
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath(); ctx.moveTo(i * w * .16, -h * .38); ctx.lineTo(i * w * .16, h * .38); ctx.stroke();
+    }
+    sheen(-w * .28, -h * .22, w * .3, h * .16, .35);
+  },
+
+  dumle(def){       // Dumle — glossy toffee-chocolate drop
+    const { w, h, base, dark } = def;
+    ball(0, h * .04, w * .5, h * .5, base, dark);
+    // little dipped swirl on top
+    ctx.strokeStyle = shade(dark, .7); ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(w * .04, -h * .18, w * .12, .2, Math.PI * 1.3); ctx.stroke();
+    sheen(-w * .18, -h * .18, w * .16, h * .14, .7);
+  },
+
+  bubs(def){        // Bubs — two-tone rounded skull/bean shape
+    const { w, h, dark } = def;
+    ball(-w * .02, 0, w * .5, h * .5, '#ff9dc4', '#e05f92');   // pink half
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(0, 0, w * .5, h * .5, 0, 0, TAU); ctx.clip();
+    const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+    g.addColorStop(0, '#5a4a4a'); g.addColorStop(1, dark);
+    ctx.fillStyle = g;
+    ctx.fillRect(-w / 2, h * .04, w, h);                       // dark (licorice) bottom
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(120,60,90,.7)'; ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.ellipse(0, 0, w * .5, h * .5, 0, 0, TAU); ctx.stroke();
+    sheen(-w * .2, -h * .22, w * .18, h * .14, .6);
+  },
+
+  car(def){         // Ahlgrens bilar — foam candy car
+    const { w, h, base, dark } = def;
+    const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+    g.addColorStop(0, shade(base, 1.15)); g.addColorStop(1, dark);
+    ctx.fillStyle = g;
+    ctx.beginPath();                                          // body + cabin
+    ctx.moveTo(-w * .48, h * .3);
+    ctx.lineTo(-w * .4, -h * .05);
+    ctx.lineTo(-w * .16, -h * .05);
+    ctx.lineTo(-w * .06, -h * .42);
+    ctx.lineTo(w * .16, -h * .42);
+    ctx.lineTo(w * .24, -h * .05);
+    ctx.lineTo(w * .42, -h * .05);
+    ctx.lineTo(w * .48, h * .3);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = shade(dark, .85); ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.6)';                  // window
+    rr(-w * .08, -h * .34, w * .2, h * .24, 3); ctx.fill();
+    ctx.fillStyle = '#3a2a2a';                               // wheels
+    ctx.beginPath(); ctx.arc(-w * .26, h * .32, h * .16, 0, TAU); ctx.arc(w * .26, h * .32, h * .16, 0, TAU); ctx.fill();
+  },
+
+  jellyheart(def){  // geléhjärta — glossy jelly heart
+    const { w, h, base, dark } = def;
+    const g = ctx.createRadialGradient(-w * .2, -h * .2, w * .08, 0, 0, w * .6);
+    g.addColorStop(0, shade(base, 1.3)); g.addColorStop(.6, base); g.addColorStop(1, dark);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(0, h * .42);
+    ctx.bezierCurveTo(-w * .7, h * .0, -w * .5, -h * .5, 0, -h * .16);
+    ctx.bezierCurveTo(w * .5, -h * .5, w * .7, h * .0, 0, h * .42);
+    ctx.fill();
+    ctx.strokeStyle = shade(dark, .9); ctx.lineWidth = 1.8; ctx.stroke();
+    sheen(-w * .16, -h * .12, w * .16, h * .12, .6);
+  },
 };
 
 function drawFood(def){
@@ -1137,6 +1248,28 @@ function drawPlate(){
       ctx.save(); ctx.translate(-57, -38); ctx.rotate(0.22); puffy(-6.5, -28, 13, 56, 5, '#eaf7ff', '#a8c9e8'); ctx.restore();
       ctx.save(); ctx.translate(57, -38); ctx.rotate(-0.22); puffy(-6.5, -28, 13, 56, 5, '#eaf7ff', '#a8c9e8'); ctx.restore();
       break;
+    case 'bowl': {
+      // glossy translucent candy bowl
+      const g = ctx.createLinearGradient(0, -46, 0, -6);
+      g.addColorStop(0, 'rgba(255,180,225,.55)');
+      g.addColorStop(1, 'rgba(210,120,190,.85)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(-74, -48);
+      ctx.quadraticCurveTo(-84, -8, -58, -6);
+      ctx.lineTo(58, -6);
+      ctx.quadraticCurveTo(84, -8, 74, -48);
+      ctx.quadraticCurveTo(0, -30, -74, -48);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#c94f9a'; ctx.lineWidth = 3; ctx.stroke();
+      // rim
+      ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-74, -48); ctx.quadraticCurveTo(0, -30, 74, -48); ctx.stroke();
+      // shine
+      ctx.fillStyle = 'rgba(255,255,255,.3)';
+      ctx.beginPath(); ctx.ellipse(-40, -30, 12, 16, .5, 0, Math.PI * 2); ctx.fill();
+      break;
+    }
   }
 
   // little face on the tray, mood follows tower lean
@@ -1158,77 +1291,133 @@ function drawPlate(){
   ctx.restore();
 }
 
-// ---------- Munchy the monster ----------
-function drawMunchy(){
-  const m = G.munchy;
-  const t = G.time;
-  const x = 58, y = H - 62 + Math.sin(t * .003) * 3;
-  const excited = m.drool > 0 || G.state === 'settling';
-  const mouthOpen = m.mouth > 0 || G.state === 'fail';
+// ---------- Mini gummy bears (they scamper along the floor and
+//            gobble up any topping that tumbles off the dish) ----------
+const BEAR_COLORS = [
+  ['#ff5b6b', '#c62740'],  // red
+  ['#7ee06e', '#3aa63f'],  // green
+  ['#ffd23a', '#e89a1c'],  // yellow
+  ['#ff9d3a', '#e06a1c'],  // orange
+  ['#66c8ff', '#2b8fd6'],  // blue
+  ['#e06bff', '#a12fd6'],  // purple
+];
+const BEAR_FLOOR = H - 26;
 
-  ctx.save();
-  ctx.translate(x, y);
-
-  // body blob
-  const g = ctx.createLinearGradient(0, -55, 0, 45);
-  g.addColorStop(0, '#b48ef5');
-  g.addColorStop(1, '#7d54c9');
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 48, 52 + (excited ? Math.sin(t * .02) * 2 : 0), 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = '#5d3ba3'; ctx.lineWidth = 2.5; ctx.stroke();
-
-  // belly
-  ctx.fillStyle = 'rgba(255,255,255,.35)';
-  ctx.beginPath(); ctx.ellipse(0, 18, 26, 22, 0, 0, Math.PI * 2); ctx.fill();
-
-  // horns
-  for (const s of [-1, 1]) {
-    ctx.fillStyle = '#ffd166';
-    ctx.beginPath();
-    ctx.moveTo(s * 20, -46); ctx.quadraticCurveTo(s * 30, -66, s * 14, -58);
-    ctx.closePath(); ctx.fill();
+function spawnBears(){
+  const bears = [];
+  const n = 4;
+  for (let i = 0; i < n; i++) {
+    const col = BEAR_COLORS[i % BEAR_COLORS.length];
+    bears.push({
+      x: 60 + i * (W - 120) / (n - 1),
+      tx: 60 + Math.random() * (W - 120),
+      base: col[0], dark: col[1],
+      face: 1,                       // toward-travel facing (-1 / +1)
+      phase: Math.random() * TAU,    // leg wiggle
+      speed: .13 + Math.random() * .05,
+      eat: 0, cheer: 0, idleT: 500 + Math.random() * 1500,
+      scale: .82 + Math.random() * .3,
+    });
   }
+  return bears;
+}
 
-  // eyes track the falling topping / dispenser
-  const target = G.falling ? G.falling.position : { x: G.disp.x, y: DISPENSER_Y };
-  const ang = Math.atan2(target.y - (y - 18), target.x - x);
-  const blink = m.blink < 0;
-  for (const s of [-1, 1]) {
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.ellipse(s * 16, -18, 10, blink ? 1.6 : 11, 0, 0, Math.PI * 2); ctx.fill();
-    if (!blink) {
-      ctx.fillStyle = '#33204d';
-      ctx.beginPath();
-      ctx.arc(s * 16 + Math.cos(ang) * 4, -18 + Math.sin(ang) * 4, 4.6, 0, Math.PI * 2);
-      ctx.fill();
+// send the nearest free bear scurrying to a dropped snack
+function sendBearTo(x){
+  if (!G.bears.length) return;
+  let best = null, bd = 1e9;
+  for (const b of G.bears) {
+    if (b.eat > 0) continue;
+    const d = Math.abs(b.x - x);
+    if (d < bd) { bd = d; best = b; }
+  }
+  (best || G.bears[0]).tx = Math.max(24, Math.min(W - 24, x));
+  (best || G.bears[0]).chase = true;
+}
+
+function updateBears(dt){
+  for (const b of G.bears) {
+    if (b.cheer > 0) { b.cheer = Math.max(0, b.cheer - dt / 1400); }
+    if (b.eat > 0) { b.eat = Math.max(0, b.eat - dt / 480); b.phase += dt * .02; continue; }
+
+    const dx = b.tx - b.x;
+    const dist = Math.abs(dx);
+    if (dist > 4) {
+      const step = Math.sign(dx) * Math.min(dist, b.speed * dt);
+      b.x += step;
+      b.face = Math.sign(dx) || b.face;
+      b.phase += Math.abs(step) * .12;   // legs move as it runs
+    } else if (b.chase) {
+      // arrived at a fallen snack → chomp!
+      b.eat = 1; b.chase = false;
+      textPop(b.x, BEAR_FLOOR - 34, 'NOM!', '#ff8fb0', 800, 20);
+    } else {
+      b.idleT -= dt;
+      if (b.idleT <= 0) {              // pick a new spot and wander there
+        b.tx = 40 + Math.random() * (W - 80);
+        b.idleT = 600 + Math.random() * 2200;
+      }
     }
+    b.x = Math.max(20, Math.min(W - 20, b.x));
   }
+}
 
-  // mouth
-  ctx.fillStyle = '#4d2160';
-  ctx.beginPath();
-  if (mouthOpen) {
-    ctx.ellipse(0, 8, 16, 13 + m.mouth * 6, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#ff7da0'; // tongue
-    ctx.beginPath(); ctx.ellipse(0, 15, 9, 5, 0, 0, Math.PI * 2); ctx.fill();
-  } else if (excited || m.happy > 0) {
-    ctx.arc(0, 4, 12, .15, Math.PI - .15); ctx.fill();
+function drawBear(b){
+  const t = G.time;
+  const bob = b.eat > 0 ? Math.abs(Math.sin(t * .03)) * 3 : 0;
+  const cheer = b.cheer > 0 ? Math.abs(Math.sin(t * .02)) * 6 : 0;
+  const y = BEAR_FLOOR - bob - cheer;
+  const s = b.scale;
+  ctx.save();
+  ctx.translate(b.x, y);
+  ctx.scale(s * b.face, s);
+
+  // shadow
+  ctx.fillStyle = 'rgba(50,15,60,.18)';
+  ctx.beginPath(); ctx.ellipse(0, 20, 15, 4, 0, 0, TAU); ctx.fill();
+
+  const jelly = (cx, cy, rx, ry) => {
+    const g = ctx.createRadialGradient(cx - rx * .35, cy - ry * .4, rx * .15, cx, cy, Math.max(rx, ry) * 1.3);
+    g.addColorStop(0, shade(b.base, 1.25));
+    g.addColorStop(.6, b.base);
+    g.addColorStop(1, b.dark);
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, TAU); ctx.fill();
+  };
+
+  // running legs (wiggle with phase)
+  const lw = Math.sin(b.phase) * 4;
+  jelly(-7, 16 + lw, 6, 7);
+  jelly(7, 16 - lw, 6, 7);
+  // arms
+  jelly(-13, 2, 5, 6);
+  jelly(13, 2, 5, 6);
+  // belly
+  jelly(0, 6, 13, 14);
+  // ears
+  jelly(-9, -16, 5, 5);
+  jelly(9, -16, 5, 5);
+  // head
+  jelly(0, -9, 11, 10);
+  // snout highlight
+  ctx.fillStyle = 'rgba(255,255,255,.35)';
+  ctx.beginPath(); ctx.ellipse(-3, -12, 4, 3, -.4, 0, TAU); ctx.fill();
+
+  // face
+  ctx.fillStyle = '#3a2033';
+  if (b.eat > 0) {
+    // open happy mouth chomping
+    ctx.beginPath(); ctx.arc(2, -6, 3.2, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, -3, 3, 2.4, 0, 0, TAU); ctx.fill();
   } else {
-    ctx.strokeStyle = '#4d2160'; ctx.lineWidth = 3; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.arc(0, 6, 9, .3, Math.PI - .3); ctx.stroke();
-  }
-
-  // drool when excited
-  if (excited) {
-    ctx.fillStyle = 'rgba(160,220,255,.85)';
-    ctx.beginPath();
-    ctx.ellipse(13, 20 + Math.sin(t * .008) * 3, 3.4, 6 + Math.sin(t * .008) * 2, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(-4, -10, 1.5, 0, TAU); ctx.arc(4, -10, 1.5, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(1, -6, 1.4, 0, TAU); ctx.fill(); // nose
   }
   ctx.restore();
+}
+
+function drawBears(){
+  for (const b of G.bears) drawBear(b);
 }
 
 // ---------- dispenser cloud ----------
@@ -1391,12 +1580,10 @@ function render(){
   drawBG();
 
   if (G.engine) {
-    drawMunchy();
     drawPlate();
     for (const b of G.toppings) drawTopping(b);
     drawDispenser();
-  } else {
-    drawMunchy();
+    drawBears();
   }
   drawParticles();
 
