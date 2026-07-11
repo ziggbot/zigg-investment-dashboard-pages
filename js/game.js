@@ -489,6 +489,11 @@ function confirmLand(b){
   G.falling = null;
   G.landed++;
 
+  // easy mode: remember where it was caught relative to the plate so we can
+  // lock it there every frame — landed pieces then ride rigidly with the
+  // plate and never glide toward each other
+  if (save.easy) b.plugin.restDX = b.position.x - G.plate.position.x;
+
   const perfect = dx < 15;
   if (perfect) {
     G.combo++;
@@ -720,6 +725,20 @@ function stepGame(){
   Engine.update(G.engine, dt * scale);
   if (G.slowmo > 0) G.slowmo -= dt;
   if (G.slowmoCd > 0) G.slowmoCd -= dt;
+
+  // easy mode: pin every landed piece to its catch-offset on the plate so
+  // the stack rides rigidly and pieces can't slide/glide into each other
+  if (save.easy && (G.state === 'play' || G.state === 'settling')) {
+    const px = G.plate.position.x;
+    for (const b of G.landedStack) {
+      if (b.plugin.restDX === undefined) continue;
+      Matter.Sleeping.set(b, false);
+      Body.setPosition(b, { x: px + b.plugin.restDX, y: b.position.y });
+      Body.setVelocity(b, { x: 0, y: Math.min(0, b.velocity.y) });
+      Body.setAngularVelocity(b, 0);
+      Body.setAngle(b, b.angle * .8);   // ease upright into a tidy stack
+    }
+  }
 
   // --- landing check ---
   const f = G.falling;
