@@ -110,7 +110,7 @@ const LEVELS = [
 // Save data
 // ============================================================
 const SAVE_KEY = 'pancakePartySave1';
-let save = { stars:{}, best:{}, muted:false, controls:'camera' };
+let save = { stars:{}, best:{}, muted:false, controls:'camera', easy:false };
 try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); } catch (e) {}
 function persist(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 
@@ -436,7 +436,8 @@ function destroyLevel(){
 function nextPreview(){
   const lv = LEVELS[G.levelIndex];
   // every so often the cloud grabs the wrong thing — steer away from it!
-  if (lv.wrong && G.landed >= 2 && G.landed < lv.target - 1 && Math.random() < .22) {
+  // (easy mode keeps it simple for the littlest — no wrong items)
+  if (!save.easy && lv.wrong && G.landed >= 2 && G.landed < lv.target - 1 && Math.random() < .22) {
     G.preview = T[lv.wrong[Math.floor(Math.random() * lv.wrong.length)]];
     G.previewWrong = true;
   } else {
@@ -452,19 +453,21 @@ function dropTopping(){
   const def = G.preview;
   const wrong = G.previewWrong;
   const lv = LEVELS[G.levelIndex];
+  const easy = save.easy && !wrong;
   const body = Bodies.rectangle(G.disp.x, DISPENSER_Y + 34, def.w, def.h, {
     chamfer: { radius: Math.min(def.corner, Math.min(def.w, def.h) / 2 - 1) },
     density: (def.density || .0011) * (wrong ? 1.7 : 1),
     // flat pieces (short height) grip much harder so they sit still and
-    // don't slide off the dish — this covers butter/meat (h24) too
-    friction: (def.friction || 1) * (def.h <= 26 ? 2.1 : 1.15) * (lv.slippery ? .65 : 1) * (lv.sticky ? 1.5 : 1),
-    frictionStatic: (def.h <= 26 ? 6 : 3.4) * (lv.sticky ? 1.4 : 1),
-    frictionAir: lv.sticky ? .07 : .035,   // sticky candy stops rolling fast
-    restitution: wrong ? .55 : (lv.sticky ? 0 : (def.restitution || .04)),
+    // don't slide off the dish — this covers butter/meat (h24) too.
+    // Easy mode maxes grip on everything so almost nothing slides off.
+    friction: easy ? 6 : (def.friction || 1) * (def.h <= 26 ? 2.1 : 1.15) * (lv.slippery ? .65 : 1) * (lv.sticky ? 1.5 : 1),
+    frictionStatic: easy ? 14 : (def.h <= 26 ? 6 : 3.4) * (lv.sticky ? 1.4 : 1),
+    frictionAir: easy ? .09 : (lv.sticky ? .07 : .035),   // sticky candy stops rolling fast
+    restitution: wrong ? .55 : (easy ? 0 : (lv.sticky ? 0 : (def.restitution || .04))),
   });
   body.plugin = { def, state: 'falling', touched: false, settle: 0, wrong, bonked: false, seed: Math.floor(Math.random() * 99999) + 1 };
   // soft food resists spinning — fewer pieces tumbling onto their edge
-  Body.setInertia(body, body.inertia * (wrong ? 1.4 : (lv.sticky ? 4.5 : 3.2)));
+  Body.setInertia(body, body.inertia * (wrong ? 1.4 : (easy ? 7 : (lv.sticky ? 4.5 : 3.2))));
   Body.setAngularVelocity(body, (Math.random() - .5) * .03);
   Composite.add(G.engine.world, body);
   G.toppings.push(body);
@@ -491,7 +494,7 @@ function confirmLand(b){
     G.combo++;
     // perfect drops "set" a little: calm the piece and grip harder
     Body.setAngularVelocity(b, 0);
-    b.friction = Math.min(1.5, b.friction + .25);
+    b.friction = Math.max(b.friction, Math.min(1.5, b.friction + .25));  // never lower easy-mode grip
     const pts = G.combo > 2 ? `YUM! ×${G.combo}` : 'PERFECT!';
     flashCombo(pts);
     textPop(b.position.x, b.position.y - 40, `+${100 * G.combo}`, '#ffdf5e', 1100, 20);
@@ -540,8 +543,12 @@ function munch(b){
   sendBearTo(fx);
   Snd.nom();
 
-  // a wrong item falling away is a GOOD dodge — never a miss
-  if (b.plugin.wrong && !wasLanded) return;
+  // a wrong item falling away is a GOOD dodge — never a miss, but we must
+  // still re-arm the dispenser or the cloud sweeps forever with no new item
+  if (b.plugin.wrong && !wasLanded) {
+    if (!G.falling && !G.preview && G.spawnDelay <= 0) G.spawnDelay = 500;
+    return;
+  }
 
   if (G.state === 'play' || G.state === 'settling') {
     G.misses++;
@@ -680,14 +687,18 @@ function stepGame(){
       G.spawnDelay -= dt;
       if (G.spawnDelay <= 0 && !G.preview && !G.falling) nextPreview();
     }
+    // self-heal: if somehow nothing is coming and nothing is falling, the
+    // cloud must always eventually offer a new item (never sweep empty)
+    else if (!G.preview && !G.falling && G.spawnDelay <= 0) G.spawnDelay = 500;
     // the cloud drops the topping by itself when the countdown runs out
     if (G.preview && !G.falling) {
       G.autoT -= dt;
       if (G.autoT <= 0) dropTopping();
     }
     // once in a while a hungry gummy bear tumbles out of the cloud
+    // (no scary raiders in easy mode)
     G.raiderCd -= dt;
-    if (G.raiderCd <= 0 && !G.raider && G.landed >= 2) spawnRaider();
+    if (!save.easy && G.raiderCd <= 0 && !G.raider && G.landed >= 2) spawnRaider();
   }
 
   // --- wind gimmick ---
@@ -718,8 +729,8 @@ function stepGame(){
     f.plugin.touchMs = (f.plugin.touchMs || 0) + dt;
     // confirm on a clean settle, OR as a fallback once a piece has been in
     // contact a while and is at least slow-ish — stops a jostling candy in
-    // the bowl from permanently blocking the next drop
-    if (f.plugin.settle >= 16 || (f.plugin.touchMs > 1500 && sp < 3.2)) confirmLand(f);
+    // the bowl (or a raider-jostled piece) from permanently blocking the drop
+    if (f.plugin.settle >= 16 || (f.plugin.touchMs > 1500 && sp < 3.2) || f.plugin.touchMs > 4500) confirmLand(f);
   } else if (f && f.plugin.wrong && f.plugin.touched) {
     // a wrong item that somehow settled without bonking: release the turn
     f.plugin.touchMs = (f.plugin.touchMs || 0) + dt;
@@ -1953,6 +1964,17 @@ function toggleControls(){
 $('btn-controls').addEventListener('click', toggleControls);
 $('btn-cam').addEventListener('click', toggleControls);
 syncControls();
+
+// ---- Easy mode (for the littlest): max grip, no hazards ----
+const easyBtn = $('btn-easy');
+function syncEasy(){
+  easyBtn.textContent = `🧸 Easy mode: ${save.easy ? 'On' : 'Off'}`;
+  easyBtn.classList.toggle('easy-on', save.easy);
+}
+easyBtn.addEventListener('click', () => {
+  save.easy = !save.easy; persist(); syncEasy(); Snd.ensure(); Snd.click();
+});
+syncEasy();
 
 const muteBtn = $('btn-mute');
 function syncMute(){ muteBtn.textContent = save.muted ? '🔇' : '🔊'; }
