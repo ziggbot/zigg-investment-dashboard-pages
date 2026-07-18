@@ -185,6 +185,11 @@ h1.logo {
   color: #fff;
   text-shadow: 0 1px 0 rgba(0,90,20,.4);
 }
+#btn-easy.hard-on {
+  background: linear-gradient(180deg, #ff8a5e, #e0501f);
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(120,40,0,.4);
+}
 
 .hint {
   font-size: clamp(13px, 2.2vh, 17px);

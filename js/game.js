@@ -110,9 +110,11 @@ const LEVELS = [
 // Save data
 // ============================================================
 const SAVE_KEY = 'pancakePartySave1';
-let save = { stars:{}, best:{}, muted:false, controls:'camera', easy:false };
+let save = { stars:{}, best:{}, muted:false, controls:'camera', easy:true };
 try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); } catch (e) {}
 function persist(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+// easy mode is the default now; give existing saves the new default once
+if (!save.easyDefaulted) { save.easy = true; save.easyDefaulted = true; persist(); }
 
 // ============================================================
 // Teeny synth (no audio assets)
@@ -1987,8 +1989,9 @@ syncControls();
 // ---- Easy mode (for the littlest): max grip, no hazards ----
 const easyBtn = $('btn-easy');
 function syncEasy(){
-  easyBtn.textContent = `🧸 Easy mode: ${save.easy ? 'On' : 'Off'}`;
+  easyBtn.textContent = save.easy ? '🧸 Easy mode' : '🔥 Difficult mode';
   easyBtn.classList.toggle('easy-on', save.easy);
+  easyBtn.classList.toggle('hard-on', !save.easy);
 }
 easyBtn.addEventListener('click', () => {
   save.easy = !save.easy; persist(); syncEasy(); Snd.ensure(); Snd.click();
